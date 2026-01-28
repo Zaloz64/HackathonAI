@@ -1,11 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Image, Modal, ScrollView, ActivityIndicator, SafeAreaView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 // CHANGE THIS to your ngrok URL or local IP
 const API_URL = 'https://beatriz-satisfiable-topologically.ngrok-free.dev';
+
+// Personas with their allergies
+const PERSONAS = [
+  { id: 'saga', name: 'Saga', allergies: ['gluten', 'soy'] },
+  { id: 'hugo', name: 'Hugo', allergies: ['milk', 'lactose'] },
+  { id: 'hanna', name: 'Hanna', allergies: ['gluten', 'milk'] },
+];
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -20,6 +28,64 @@ export default function App() {
   const [ingredientsModalVisible, setIngredientsModalVisible] = useState(false);
   const [analyzingAllergens, setAnalyzingAllergens] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
+  const [activeTab, setActiveTab] = useState('scan'); // 'friends', 'scan', 'profile'
+  const [selectedTopTab, setSelectedTopTab] = useState('persona'); // 'persona', 'dietary', 'events'
+  const [selectedPersonas, setSelectedPersonas] = useState([]); // Selected persona IDs
+  const [safetyResult, setSafetyResult] = useState(null); // { safe: bool, unsafeFor: [{name, reasons}] }
+
+  // Toggle persona selection
+  const togglePersona = (personaId) => {
+    setSelectedPersonas(prev =>
+      prev.includes(personaId)
+        ? prev.filter(id => id !== personaId)
+        : [...prev, personaId]
+    );
+    // Reset safety result when personas change
+    setSafetyResult(null);
+  };
+
+  // Check if scanned product is safe for selected personas
+  const checkSafetyForPersonas = (verdict) => {
+    if (!verdict || selectedPersonas.length === 0) {
+      setSafetyResult(null);
+      return;
+    }
+
+    const unsafeFor = [];
+
+    selectedPersonas.forEach(personaId => {
+      const persona = PERSONAS.find(p => p.id === personaId);
+      if (!persona) return;
+
+      const reasons = [];
+
+      // Check gluten
+      if (persona.allergies.includes('gluten') && verdict.gluten?.contains) {
+        reasons.push('Contains gluten');
+      }
+      if (persona.allergies.includes('gluten') && verdict.gluten?.traces) {
+        reasons.push('May contain traces of gluten');
+      }
+
+      // Check milk/lactose
+      if ((persona.allergies.includes('milk') || persona.allergies.includes('lactose')) && verdict.milk?.contains) {
+        reasons.push('Contains milk');
+      }
+      if ((persona.allergies.includes('milk') || persona.allergies.includes('lactose')) && verdict.milk?.traces) {
+        reasons.push('May contain traces of milk');
+      }
+
+      if (reasons.length > 0) {
+        unsafeFor.push({ name: persona.name, reasons });
+      }
+    });
+
+    setSafetyResult({
+      safe: unsafeFor.length === 0,
+      unsafeFor,
+      checkedPersonas: selectedPersonas.map(id => PERSONAS.find(p => p.id === id)?.name).filter(Boolean)
+    });
+  };
 
   // Test backend connection
   const testConnection = async () => {
@@ -158,13 +224,19 @@ export default function App() {
           console.log('========== APP SCAN COMPLETE ==========\n');
 
           setScannedIngredients({ raw: scanResult.text });
-          setAllergenVerdict({
+          const verdict = {
             gluten: scanResult.gluten,
             milk: scanResult.milk,
             method: scanResult.method,
             notes: scanResult.notes
-          });
-          setIngredientsModalVisible(true);
+          };
+          setAllergenVerdict(verdict);
+
+          // Check safety for selected personas
+          checkSafetyForPersonas(verdict);
+
+          // Don't open modal automatically, show result in main view
+          // setIngredientsModalVisible(true);
         } else {
           const errorData = await response.json();
           console.log(`[APP ERROR] ${Date.now() - startTime}ms - ${JSON.stringify(errorData)}`);
@@ -259,56 +331,190 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Food Scanner</Text>
-      <Text style={styles.subtitle}>Scan products to see ingredients</Text>
+    <SafeAreaView style={styles.container}>
+      {/* Top Navigation Pills */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={[styles.topPill, selectedTopTab === 'persona' && styles.topPillActive]}
+          onPress={() => setSelectedTopTab('persona')}
+        >
+          <Text style={[styles.topPillText, selectedTopTab === 'persona' && styles.topPillTextActive]}>
+            Persona ({selectedPersonas.length})
+          </Text>
+        </TouchableOpacity>
 
-      {loading && <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />}
+        <TouchableOpacity
+          style={[styles.topPill, selectedTopTab === 'dietary' && styles.topPillActive]}
+          onPress={() => setSelectedTopTab('dietary')}
+        >
+          <Text style={[styles.topPillText, selectedTopTab === 'dietary' && styles.topPillTextActive]}>
+            Dietary
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={startScanning} disabled={loading}>
-        <Text style={styles.buttonText}>Scan Barcode</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.topPill, selectedTopTab === 'events' && styles.topPillActive]}
+          onPress={() => setSelectedTopTab('events')}
+        >
+          <Text style={[styles.topPillText, selectedTopTab === 'events' && styles.topPillTextActive]}>
+            Events (10)
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={[styles.button, styles.ingredientButton]} onPress={scanIngredients} disabled={loading}>
-        <Text style={styles.buttonText}>Scan Ingredients</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.viewButton, (!product && !scannedIngredients) && styles.buttonDisabled]}
-        onPress={() => {
-          if (scannedIngredients) {
-            viewScannedIngredients();
-          } else if (product) {
-            viewSavedProduct();
-          } else {
-            alert('No product or ingredients scanned yet!');
-          }
-        }}
-        disabled={(!product && !scannedIngredients) || loading}
-      >
-        <Text style={styles.buttonText}>View Last Scan</Text>
-      </TouchableOpacity>
-
-      {product && (
-        <Text style={styles.savedText}>Product: {product.product_name || 'Unknown'}</Text>
+      {/* Persona Selection Pills (shown when Persona tab is active) */}
+      {selectedTopTab === 'persona' && (
+        <View style={styles.personaBar}>
+          {PERSONAS.map(persona => (
+            <TouchableOpacity
+              key={persona.id}
+              style={[
+                styles.personaPill,
+                selectedPersonas.includes(persona.id) && styles.personaPillActive
+              ]}
+              onPress={() => togglePersona(persona.id)}
+            >
+              <Text style={[
+                styles.personaPillText,
+                selectedPersonas.includes(persona.id) && styles.personaPillTextActive
+              ]}>
+                {persona.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
-      {scannedIngredients && (
-        <Text style={styles.savedText}>Ingredients scanned!</Text>
-      )}
 
-      {/* Test Connection Button */}
-      <TouchableOpacity
-        style={[styles.button, styles.testButton]}
-        onPress={testConnection}
-      >
-        <Text style={styles.buttonText}>Test Backend Connection</Text>
-      </TouchableOpacity>
+      {/* Main Content Area */}
+      <View style={styles.mainContent}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Processing...</Text>
+          </View>
+        ) : (
+          <View style={styles.scanPreview}>
+            {/* Show scanned image if available */}
+            {ingredientsImage && (
+              <Image
+                source={{ uri: ingredientsImage }}
+                style={styles.scannedImagePreview}
+                blurRadius={4}
+              />
+            )}
 
-      {connectionStatus && (
-        <Text style={styles.connectionStatus}>{connectionStatus}</Text>
-      )}
+            {/* Safety Result Overlay */}
+            {safetyResult && selectedPersonas.length > 0 ? (
+              <View style={styles.safetyOverlay}>
+                {safetyResult.safe ? (
+                  <>
+                    <View style={styles.safeIcon}>
+                      <Ionicons name="checkmark" size={60} color="#fff" />
+                    </View>
+                    <Text style={styles.safetyTitle}>
+                      This is safe for {safetyResult.checkedPersonas?.join(', ')}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.unsafeIcon}>
+                      <Ionicons name="close" size={60} color="#fff" />
+                    </View>
+                    {safetyResult.unsafeFor.map((person, idx) => (
+                      <View key={idx} style={styles.unsafeReasonContainer}>
+                        <Text style={styles.safetyTitle}>
+                          This is not safe for {person.name}:
+                        </Text>
+                        {person.reasons.map((reason, rIdx) => (
+                          <Text key={rIdx} style={styles.unsafeReason}>• {reason}</Text>
+                        ))}
+                      </View>
+                    ))}
+                  </>
+                )}
 
-      <Text style={styles.apiUrlText}>API: {API_URL}</Text>
+                {/* View details button */}
+                <TouchableOpacity
+                  style={styles.viewDetailsButton}
+                  onPress={() => setIngredientsModalVisible(true)}
+                >
+                  <Text style={styles.viewDetailsText}>View full details</Text>
+                </TouchableOpacity>
+              </View>
+            ) : ingredientsImage ? (
+              <View style={styles.imageOverlay}>
+                <Ionicons name="checkmark-circle" size={48} color="#34C759" />
+                <Text style={styles.imageOverlayText}>Scan complete</Text>
+                {selectedPersonas.length === 0 && (
+                  <Text style={styles.selectPersonaHint}>Select a persona to check safety</Text>
+                )}
+              </View>
+            ) : (
+              <View style={styles.scanFrame}>
+                <Ionicons name="camera-outline" size={64} color="#ccc" />
+                <Text style={styles.scanHint}>Tap the scan button below</Text>
+                <Text style={styles.scanSubHint}>to scan ingredients or barcode</Text>
+                {selectedPersonas.length > 0 && (
+                  <Text style={styles.selectedPersonasHint}>
+                    Checking for: {selectedPersonas.map(id => PERSONAS.find(p => p.id === id)?.name).join(', ')}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* View last scan */}
+            {scannedIngredients && !safetyResult && (
+              <TouchableOpacity
+                style={styles.lastScanCard}
+                onPress={() => setIngredientsModalVisible(true)}
+              >
+                <Ionicons name="document-text" size={20} color="#007AFF" />
+                <Text style={styles.lastScanText}>View scan results</Text>
+                <Ionicons name="chevron-forward" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => setActiveTab('friends')}
+        >
+          <Ionicons
+            name={activeTab === 'friends' ? 'people' : 'people-outline'}
+            size={28}
+            color={activeTab === 'friends' ? '#007AFF' : '#8E8E93'}
+          />
+          <Text style={[styles.navLabel, activeTab === 'friends' && styles.navLabelActive]}>Friends</Text>
+        </TouchableOpacity>
+
+        {/* Center Scan Button */}
+        <TouchableOpacity
+          style={styles.scanButton}
+          onPress={scanIngredients}
+          onLongPress={startScanning}
+          disabled={loading}
+        >
+          <View style={styles.scanButtonInner}>
+            <Ionicons name="scan" size={32} color="#fff" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => setActiveTab('profile')}
+        >
+          <Ionicons
+            name={activeTab === 'profile' ? 'person' : 'person-outline'}
+            size={28}
+            color={activeTab === 'profile' ? '#007AFF' : '#8E8E93'}
+          />
+          <Text style={[styles.navLabel, activeTab === 'profile' && styles.navLabelActive]}>Profile</Text>
+        </TouchableOpacity>
+      </View>
 
       <Modal
         animationType="slide"
@@ -512,8 +718,8 @@ export default function App() {
         </ScrollView>
       </Modal>
 
-      <StatusBar style="auto" />
-    </View>
+      <StatusBar style="dark" />
+    </SafeAreaView>
   );
 }
 
@@ -531,21 +737,151 @@ const getNutriScoreColor = (grade) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  // Top Navigation Pills
+  topBar: {
+    flexDirection: 'row',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    gap: 10,
+    backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  topPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#e8e8e8',
   },
-  subtitle: {
+  topPillActive: {
+    backgroundColor: '#007AFF',
+  },
+  topPillText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  topPillTextActive: {
+    color: '#fff',
+  },
+  // Main Content Area
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#e0e0e0',
+    margin: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#666',
+  },
+  scanPreview: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#333',
+    margin: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  scannedImagePreview: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imageOverlay: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 30,
+    paddingVertical: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  imageOverlayText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 10,
+  },
+  scanFrame: {
+    alignItems: 'center',
+  },
+  scanHint: {
     fontSize: 18,
     color: '#666',
-    marginBottom: 40,
+    fontWeight: '500',
+    marginTop: 15,
   },
+  scanSubHint: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+  },
+  lastScanCard: {
+    position: 'absolute',
+    bottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 10,
+  },
+  lastScanText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  // Bottom Navigation
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  navItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  navLabel: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 4,
+  },
+  navLabelActive: {
+    color: '#007AFF',
+  },
+  scanButton: {
+    marginTop: -30,
+  },
+  scanButtonInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  // Legacy styles for modals
   button: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 30,
@@ -565,20 +901,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#5856D6',
     marginBottom: 20,
   },
-  testButton: {
-    backgroundColor: '#8E8E93',
-    marginTop: 30,
-  },
-  connectionStatus: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#666',
-  },
-  apiUrlText: {
-    marginTop: 5,
-    fontSize: 10,
-    color: '#999',
-  },
   closeButton: {
     backgroundColor: '#FF3B30',
     marginTop: 20,
@@ -596,15 +918,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-  },
-  savedText: {
-    marginTop: 20,
-    color: '#34C759',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  loader: {
-    marginVertical: 20,
   },
   scannerContainer: {
     flex: 1,
