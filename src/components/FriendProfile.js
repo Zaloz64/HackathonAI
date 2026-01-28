@@ -162,5 +162,5 @@ const styles = StyleSheet.create({
 
     favGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
     favTile: { width: "31.5%", aspectRatio: 1, borderRadius: 12, backgroundColor: "#D1D1D6", position: "relative", overflow: "hidden" },
-    heart: { position: "absolute", top: 8, right: 8, opacity: 0.9 },
+    heart: { position: "absolute", top: 8, right: 8,  opacity: 0.9 },
 });
