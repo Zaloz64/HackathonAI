@@ -234,6 +234,8 @@ export default function App() {
             onBack={() => setActiveTab("friends")}
           />
         );
+      case "profile":
+        return <ProfilePage />;
       default:
         return (
           <>

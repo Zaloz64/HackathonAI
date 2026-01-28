@@ -22,7 +22,7 @@ export default function EventsPage({ onOpenFriends, onAddEvent }) {
             onPress={onOpenFriends}
             activeOpacity={0.85}
           >
-            <Ionicons name="people-outline" size={22} color="#007AFF" />
+            <Ionicons name="people-outline" size={22} color="#F4F0E2" />
           </TouchableOpacity>
 
           {/* Add Event Button */}
@@ -40,7 +40,7 @@ export default function EventsPage({ onOpenFriends, onAddEvent }) {
         {events.map(event => (
           <TouchableOpacity key={event.id} style={eventStyles.eventCard} activeOpacity={0.85}>
             <View style={eventStyles.eventIcon}>
-              <Ionicons name={event.icon} size={24} color="#007AFF" />
+              <Ionicons name={event.icon} size={24} color="#5F8A5F" />
             </View>
             <View style={eventStyles.eventInfo}>
               <Text style={eventStyles.eventTitle}>{event.title}</Text>
@@ -51,7 +51,7 @@ export default function EventsPage({ onOpenFriends, onAddEvent }) {
                 <Text style={eventStyles.eventDate}>{event.time}</Text>
               </View>
               <View style={eventStyles.attendeesRow}>
-                <Ionicons name="people-outline" size={14} color="#007AFF" />
+                <Ionicons name="people-outline" size={14} color="#5F8A5F" />
                 <Text style={eventStyles.attendeesText}>{event.attendees} attendees</Text>
               </View>
             </View>
@@ -66,19 +66,20 @@ export default function EventsPage({ onOpenFriends, onAddEvent }) {
 }
 
 const eventStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#F4F0E2' },
 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
+    paddingTop: 60,
+    paddingBottom: 15,
+    backgroundColor: '#5F8A5F',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#9DBB97',
   },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#F4F0E2' },
 
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
@@ -86,7 +87,7 @@ const eventStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F4FF',
+    backgroundColor: '#9DBB97',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -95,7 +96,7 @@ const eventStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#9FBE9A',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -119,7 +120,7 @@ const eventStyles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#E8F4FF',
+    backgroundColor: '#9DBB97',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -129,6 +130,6 @@ const eventStyles = StyleSheet.create({
   eventMeta: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
   eventDate: { fontSize: 13, color: '#666', marginLeft: 5 },
   attendeesRow: { flexDirection: 'row', alignItems: 'center' },
-  attendeesText: { fontSize: 13, color: '#007AFF', marginLeft: 5 },
+  attendeesText: { fontSize: 13, color: '#5F8A5F', marginLeft: 5 },
   emptySpace: { height: 20 },
 });
