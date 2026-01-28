@@ -26,13 +26,13 @@ export default function BottomNavigation({
 
       {/* Center Scan Button */}
       <TouchableOpacity
-        style={styles.scanButton}
-        onPress={onScanPress}
-        onLongPress={onScanLongPress}
+        style={activeTab === 'scan' ? styles.scanButton : styles.scanButtonSmall}
+        onPress={activeTab === 'scan' ? onScanPress : () => onSelectTab('scan')}
+        onLongPress={activeTab === 'scan' ? onScanLongPress : undefined}
         disabled={loading}
       >
-        <View style={styles.scanButtonInner}>
-          <Ionicons name="scan" size={32} color="#fff" />
+        <View style={activeTab === 'scan' ? styles.scanButtonInner : styles.scanButtonInnerSmall}>
+          <Ionicons name="scan" size={activeTab === 'scan' ? 32 : 24} color="#fff" />
         </View>
       </TouchableOpacity>
 

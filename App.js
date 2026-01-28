@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
-import './src/styles/global.scss';
 
 // Services
 import { fetchProduct, scanIngredientsImage, classifyAllergens } from './src/services/api';
