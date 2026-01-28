@@ -4,8 +4,8 @@ import { StyleSheet, Text, View, TouchableOpacity, Image, Modal, ScrollView, Act
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
-const OCR_API_KEY = 'K85329702488957'; // Free OCR.space API key
-const API_URL = 'http://localhost:3001'; // Backend URL - change for production
+// CHANGE THIS to your ngrok URL or local IP
+const API_URL = 'https://beatriz-satisfiable-topologically.ngrok-free.dev';
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -18,6 +18,40 @@ export default function App() {
   const [allergenVerdict, setAllergenVerdict] = useState(null);
   const [ingredientsImage, setIngredientsImage] = useState(null);
   const [ingredientsModalVisible, setIngredientsModalVisible] = useState(false);
+  const [analyzingAllergens, setAnalyzingAllergens] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState(null);
+
+  // Test backend connection
+  const testConnection = async () => {
+    setConnectionStatus('testing...');
+    console.log(`[TEST] Testing connection to ${API_URL}/api/ping`);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`${API_URL}/api/ping`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[TEST] Connection successful:', data);
+        setConnectionStatus('Connected!');
+        alert('Backend connected successfully!');
+      } else {
+        console.log('[TEST] Bad response:', response.status);
+        setConnectionStatus(`Error: ${response.status}`);
+      }
+    } catch (error) {
+      console.log('[TEST] Connection failed:', error.message);
+      setConnectionStatus(`Failed: ${error.message}`);
+      alert(`Cannot connect to backend!\n\nURL: ${API_URL}\nError: ${error.message}\n\nMake sure:\n1. Backend is running\n2. Phone and computer on same WiFi\n3. URL is correct`);
+    }
+  };
 
   const handleBarCodeScanned = async ({ data }) => {
     if (scanned) return;
@@ -79,66 +113,115 @@ export default function App() {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.8,
+      quality: 0.3, // Lower quality for faster upload
       base64: true,
+      exif: false,
     });
 
     if (!result.canceled && result.assets[0].base64) {
       setLoading(true);
       setIngredientsImage(result.assets[0].uri);
 
-      try {
-        const formData = new FormData();
-        formData.append('base64Image', `data:image/jpeg;base64,${result.assets[0].base64}`);
-        formData.append('language', 'eng');
-        formData.append('isOverlayRequired', 'false');
-        formData.append('OCREngine', '2');
+      const startTime = Date.now();
+      const imgSize = Math.round(result.assets[0].base64.length / 1024);
 
-        const response = await fetch('https://api.ocr.space/parse/image', {
+      console.log('\n========== APP SCAN START ==========');
+      console.log(`[APP STEP 1] Image captured - Size: ${imgSize}KB`);
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.log('[APP TIMEOUT] 60s timeout reached - aborting');
+          controller.abort();
+        }, 60000);
+
+        console.log(`[APP STEP 2] ${Date.now() - startTime}ms - Sending to backend...`);
+
+        const response = await fetch(`${API_URL}/api/scan`, {
           method: 'POST',
           headers: {
-            'apikey': OCR_API_KEY,
+            'Content-Type': 'application/json',
           },
-          body: formData,
+          body: JSON.stringify({
+            image: result.assets[0].base64
+          }),
+          signal: controller.signal,
         });
 
-        const ocrResult = await response.json();
+        clearTimeout(timeoutId);
+        console.log(`[APP STEP 3] ${Date.now() - startTime}ms - Backend responded (status: ${response.status})`);
 
-        if (ocrResult.ParsedResults && ocrResult.ParsedResults[0]) {
-          const extractedText = ocrResult.ParsedResults[0].ParsedText;
-          setScannedIngredients({ raw: extractedText });
+        if (response.ok) {
+          const scanResult = await response.json();
+          console.log(`[APP STEP 4] ${Date.now() - startTime}ms - Response parsed`);
+          console.log(`[APP RESULT] Backend timing: ${scanResult.timing?.total_ms}ms`);
+          console.log('========== APP SCAN COMPLETE ==========\n');
 
-          // Call backend for allergen classification
-          try {
-            const classifyResponse = await fetch(`${API_URL}/api/classify`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ text: extractedText }),
-            });
-
-            if (classifyResponse.ok) {
-              const verdict = await classifyResponse.json();
-              setAllergenVerdict(verdict);
-            } else {
-              // Backend error - use null to indicate classification failed
-              setAllergenVerdict(null);
-            }
-          } catch (classifyError) {
-            console.log('Classification failed:', classifyError.message);
-            setAllergenVerdict(null);
-          }
-
+          setScannedIngredients({ raw: scanResult.text });
+          setAllergenVerdict({
+            gluten: scanResult.gluten,
+            milk: scanResult.milk,
+            method: scanResult.method,
+            notes: scanResult.notes
+          });
           setIngredientsModalVisible(true);
         } else {
-          alert('Could not extract text from image. Try again with better lighting.');
+          const errorData = await response.json();
+          console.log(`[APP ERROR] ${Date.now() - startTime}ms - ${JSON.stringify(errorData)}`);
+          alert('Scan failed: ' + (errorData.message || errorData.error));
         }
       } catch (error) {
-        alert('Error processing image: ' + error.message);
+        console.log(`[APP ERROR] ${Date.now() - startTime}ms - ${error.name}: ${error.message}`);
+        if (error.name === 'AbortError') {
+          alert('Request timed out after 60s. Check backend logs.');
+        } else {
+          alert('Error: ' + error.message);
+        }
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const analyzeAllergens = async () => {
+    if (!scannedIngredients?.raw) {
+      alert('No text to analyze');
+      return;
+    }
+
+    setAnalyzingAllergens(true);
+
+    try {
+      // Add timeout for backend call
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      const classifyResponse = await fetch(`${API_URL}/api/classify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: scannedIngredients.raw }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (classifyResponse.ok) {
+        const verdict = await classifyResponse.json();
+        setAllergenVerdict(verdict);
+      } else {
+        alert('Failed to analyze allergens. Check if backend is running.');
+      }
+    } catch (classifyError) {
+      if (classifyError.name === 'AbortError') {
+        alert('Analysis timed out. The server may be slow.');
+      } else {
+        console.log('Classification failed:', classifyError.message);
+        alert('Could not connect to server: ' + classifyError.message);
+      }
+    } finally {
+      setAnalyzingAllergens(false);
     }
   };
 
@@ -212,6 +295,20 @@ export default function App() {
       {scannedIngredients && (
         <Text style={styles.savedText}>Ingredients scanned!</Text>
       )}
+
+      {/* Test Connection Button */}
+      <TouchableOpacity
+        style={[styles.button, styles.testButton]}
+        onPress={testConnection}
+      >
+        <Text style={styles.buttonText}>Test Backend Connection</Text>
+      </TouchableOpacity>
+
+      {connectionStatus && (
+        <Text style={styles.connectionStatus}>{connectionStatus}</Text>
+      )}
+
+      <Text style={styles.apiUrlText}>API: {API_URL}</Text>
 
       <Modal
         animationType="slide"
@@ -307,57 +404,10 @@ export default function App() {
       >
         <ScrollView style={styles.modalScrollView}>
           <View style={styles.productModalContainer}>
-            <Text style={styles.productName}>Allergen Analysis</Text>
+            <Text style={styles.productName}>Scanned Text</Text>
 
             {ingredientsImage && (
               <Image source={{ uri: ingredientsImage }} style={styles.productImage} />
-            )}
-
-            {allergenVerdict ? (
-              <>
-                <View style={styles.allergenVerdictContainer}>
-                  <View style={[styles.allergenBadge, allergenVerdict.has_gluten ? styles.allergenDanger : styles.allergenSafe]}>
-                    <Text style={styles.allergenBadgeText}>
-                      Gluten: {allergenVerdict.has_gluten ? 'YES' : 'NO'}
-                    </Text>
-                  </View>
-                  <View style={[styles.allergenBadge, allergenVerdict.has_milk ? styles.allergenDanger : styles.allergenSafe]}>
-                    <Text style={styles.allergenBadgeText}>
-                      Milk: {allergenVerdict.has_milk ? 'YES' : 'NO'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.confidenceContainer}>
-                  <Text style={styles.confidenceLabel}>Confidence:</Text>
-                  <View style={styles.confidenceBar}>
-                    <View style={[styles.confidenceFill, { width: `${allergenVerdict.confidence * 100}%` }]} />
-                  </View>
-                  <Text style={styles.confidenceValue}>{Math.round(allergenVerdict.confidence * 100)}%</Text>
-                </View>
-
-                {allergenVerdict.method === 'keyword_fallback' && (
-                  <Text style={styles.fallbackWarning}>Using keyword detection (backend unavailable)</Text>
-                )}
-
-                {allergenVerdict.evidence && allergenVerdict.evidence.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Evidence</Text>
-                    {allergenVerdict.evidence.map((item, index) => (
-                      <View key={index} style={styles.evidenceItem}>
-                        <Text style={styles.evidenceText}>"{item}"</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </>
-            ) : (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Classification Unavailable</Text>
-                <Text style={styles.sectionContent}>
-                  Could not classify allergens. Make sure the backend server is running.
-                </Text>
-              </View>
             )}
 
             <View style={styles.section}>
@@ -366,6 +416,91 @@ export default function App() {
                 {scannedIngredients?.raw || 'No text extracted'}
               </Text>
             </View>
+
+            {!allergenVerdict && (
+              <TouchableOpacity
+                style={[styles.button, styles.analyzeButton]}
+                onPress={analyzeAllergens}
+                disabled={analyzingAllergens}
+              >
+                {analyzingAllergens ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Analyze Allergens</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {allergenVerdict && (
+              <>
+                <Text style={styles.resultTitle}>Allergen Results</Text>
+
+                {/* Gluten Section */}
+                <View style={styles.allergenSection}>
+                  <Text style={styles.allergenSectionTitle}>Gluten</Text>
+                  <View style={styles.allergenRow}>
+                    <View style={styles.allergenIndicator}>
+                      <Text style={styles.allergenLabel}>Contains:</Text>
+                      <View style={[styles.statusBadge, allergenVerdict.gluten?.contains ? styles.statusDanger : styles.statusSafe]}>
+                        <Text style={styles.statusText}>{allergenVerdict.gluten?.contains ? 'YES' : 'NO'}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.allergenIndicator}>
+                      <Text style={styles.allergenLabel}>Traces:</Text>
+                      <View style={[styles.statusBadge, allergenVerdict.gluten?.traces ? styles.statusWarning : styles.statusSafe]}>
+                        <Text style={styles.statusText}>{allergenVerdict.gluten?.traces ? 'YES' : 'NO'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  {allergenVerdict.gluten?.evidence?.length > 0 && (
+                    <View style={styles.evidenceInline}>
+                      {allergenVerdict.gluten.evidence.map((item, index) => (
+                        <Text key={index} style={styles.evidenceTextSmall}>"{item}"</Text>
+                      ))}
+                    </View>
+                  )}
+                  <Text style={styles.confidenceSmall}>
+                    Confidence: {Math.round((allergenVerdict.gluten?.confidence || 0) * 100)}%
+                  </Text>
+                </View>
+
+                {/* Milk Section */}
+                <View style={styles.allergenSection}>
+                  <Text style={styles.allergenSectionTitle}>Milk</Text>
+                  <View style={styles.allergenRow}>
+                    <View style={styles.allergenIndicator}>
+                      <Text style={styles.allergenLabel}>Contains:</Text>
+                      <View style={[styles.statusBadge, allergenVerdict.milk?.contains ? styles.statusDanger : styles.statusSafe]}>
+                        <Text style={styles.statusText}>{allergenVerdict.milk?.contains ? 'YES' : 'NO'}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.allergenIndicator}>
+                      <Text style={styles.allergenLabel}>Traces:</Text>
+                      <View style={[styles.statusBadge, allergenVerdict.milk?.traces ? styles.statusWarning : styles.statusSafe]}>
+                        <Text style={styles.statusText}>{allergenVerdict.milk?.traces ? 'YES' : 'NO'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  {allergenVerdict.milk?.evidence?.length > 0 && (
+                    <View style={styles.evidenceInline}>
+                      {allergenVerdict.milk.evidence.map((item, index) => (
+                        <Text key={index} style={styles.evidenceTextSmall}>"{item}"</Text>
+                      ))}
+                    </View>
+                  )}
+                  <Text style={styles.confidenceSmall}>
+                    Confidence: {Math.round((allergenVerdict.milk?.confidence || 0) * 100)}%
+                  </Text>
+                </View>
+
+                {/* Notes */}
+                {allergenVerdict.notes && (
+                  <Text style={styles.notesText}>{allergenVerdict.notes}</Text>
+                )}
+
+                <Text style={styles.methodText}>Method: {allergenVerdict.method}</Text>
+              </>
+            )}
 
             <TouchableOpacity
               style={[styles.button, styles.closeButton]}
@@ -425,6 +560,24 @@ const styles = StyleSheet.create({
   },
   ingredientButton: {
     backgroundColor: '#FF9500',
+  },
+  analyzeButton: {
+    backgroundColor: '#5856D6',
+    marginBottom: 20,
+  },
+  testButton: {
+    backgroundColor: '#8E8E93',
+    marginTop: 30,
+  },
+  connectionStatus: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  apiUrlText: {
+    marginTop: 5,
+    fontSize: 10,
+    color: '#999',
   },
   closeButton: {
     backgroundColor: '#FF3B30',
@@ -569,6 +722,13 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
+  resultTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 10,
+    marginBottom: 5,
+  },
   allergenVerdictContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -643,5 +803,86 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
     fontStyle: 'italic',
+  },
+  allergenSection: {
+    width: '100%',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    padding: 15,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  allergenSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  allergenRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  allergenIndicator: {
+    alignItems: 'center',
+  },
+  allergenLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  statusBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  statusDanger: {
+    backgroundColor: '#E63E11',
+  },
+  statusWarning: {
+    backgroundColor: '#FF9500',
+  },
+  statusSafe: {
+    backgroundColor: '#038141',
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  evidenceInline: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  evidenceTextSmall: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  confidenceSmall: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  notesText: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
+  methodText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'center',
   },
 });
