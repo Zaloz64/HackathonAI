@@ -1,7 +1,13 @@
 // Button styles (shared across components)
+// Color palette:
+// Primary (dark green): #5F8A5F
+// Secondary (light sage): #9DBB97
+// Accent (medium sage): #9FBE9A
+// Background (cream): #F4F0E2
+
 export const buttonStyles = {
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#5F8A5F',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 10,
@@ -10,19 +16,20 @@ export const buttonStyles = {
     alignItems: 'center',
   },
   viewButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#9DBB97',
   },
   ingredientButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#9FBE9A',
   },
   analyzeButton: {
-    backgroundColor: '#5856D6',
+    backgroundColor: '#5F8A5F',
+    marginTop: 30,
     marginBottom: 20,
   },
   closeButton: {
-    backgroundColor: '#FF3B30',
-    marginTop: 20,
-    marginBottom: 40,
+    backgroundColor: '#8B4513',
+    marginTop: 40,
+    marginBottom: 50,
   },
   cancelButton: {
     position: 'absolute',

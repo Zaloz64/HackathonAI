@@ -19,6 +19,16 @@ const openai = process.env.OPENAI_API_KEY
 // Set to true to skip LLM and use fast keyword detection only
 const USE_KEYWORDS_ONLY = process.env.USE_KEYWORDS_ONLY === 'true';
 
+// Set to true to use mock data instead of real OCR (for development)
+const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'true' || true; // Set to true for dev
+
+// Mock ingredients list with various allergens for testing
+const MOCK_INGREDIENTS = `Ingredienser: Vetemjöl, vatten, socker, rapsolja,
+jäst, salt, mjölkpulver, vasslepulver, emulgeringsmedel (E471, E472e),
+mjölksyra, konserveringsmedel (kalciumpropionat).
+Kan innehålla spår av soja, ägg och nötter.
+Glutenfri: Nej`;
+
 // === KEYWORD PATTERNS ===
 
 // Gluten ingredients (contains)
@@ -279,35 +289,89 @@ app.post('/api/scan', async (req, res) => {
     const imageSize = Math.round(image.length / 1024);
     console.log(`[STEP 2] Image received - Size: ${imageSize}KB`);
 
+    // Use mock data for development
+    if (USE_MOCK_DATA) {
+      console.log(`[STEP 3] Using MOCK DATA (OCR bypassed)`);
+
+      const extractedText = MOCK_INGREDIENTS;
+      const classification = localKeywordDetection(extractedText);
+
+      console.log(`[STEP 4] ${Date.now() - startTime}ms - Mock classification done`);
+      console.log('========== SCAN COMPLETE (MOCK) ==========\n');
+
+      return res.json({
+        text: extractedText,
+        ...classification,
+        timing: {
+          total_ms: Date.now() - startTime
+        },
+        mock: true
+      });
+    }
+
     // Prepare OCR request
     const base64Image = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
-    const formData = new URLSearchParams();
-    formData.append('base64Image', base64Image);
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
-    formData.append('OCREngine', '1');
-    formData.append('scale', 'true');
-    formData.append('detectOrientation', 'false');
 
-    console.log(`[STEP 3] ${Date.now() - startTime}ms - Sending to OCR.space...`);
+    // Helper function to make OCR request
+    const makeOCRRequest = async (engine, timeoutMs) => {
+      const formData = new URLSearchParams();
+      formData.append('base64Image', base64Image);
+      formData.append('language', 'eng');
+      formData.append('isOverlayRequired', 'false');
+      formData.append('OCREngine', engine);
+      formData.append('scale', 'true');
+      formData.append('detectOrientation', 'false');
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      console.log('[TIMEOUT] OCR.space timeout after 30s - aborting');
-      controller.abort();
-    }, 30000);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch('https://api.ocr.space/parse/image', {
+          method: 'POST',
+          headers: {
+            'apikey': OCR_API_KEY,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        return response;
+      } catch (err) {
+        clearTimeout(timeout);
+        throw err;
+      }
+    };
+
+    console.log(`[STEP 3] ${Date.now() - startTime}ms - Sending to OCR.space (Engine 2)...`);
+
+    let ocrResponse;
+    try {
+      // Try Engine 2 first (faster for photos)
+      ocrResponse = await makeOCRRequest('2', 25000);
+
+      // If Engine 2 fails or times out, try Engine 1
+      const result = await ocrResponse.json();
+      if (!result.ParsedResults || !result.ParsedResults[0] || result.IsErroredOnProcessing) {
+        console.log(`[STEP 3b] ${Date.now() - startTime}ms - Engine 2 failed, trying Engine 1...`);
+        ocrResponse = await makeOCRRequest('1', 25000);
+      } else {
+        // Engine 2 worked, reconstruct response-like object
+        ocrResponse = {
+          status: 200,
+          json: async () => result
+        };
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log(`[STEP 3b] ${Date.now() - startTime}ms - Engine 2 timeout, trying Engine 1...`);
+        ocrResponse = await makeOCRRequest('1', 25000);
+      } else {
+        throw err;
+      }
+    }
 
     try {
-      const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
-        method: 'POST',
-        headers: {
-          'apikey': OCR_API_KEY,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
 
       console.log(`[STEP 4] ${Date.now() - startTime}ms - OCR.space responded (status: ${ocrResponse.status})`);
 
@@ -347,10 +411,9 @@ app.post('/api/scan', async (req, res) => {
       res.json(response);
 
     } catch (fetchError) {
-      clearTimeout(timeout);
       if (fetchError.name === 'AbortError') {
-        console.log(`[ERROR] ${Date.now() - startTime}ms - OCR.space TIMEOUT`);
-        return res.status(504).json({ error: 'OCR timeout', message: 'OCR.space took too long (>30s)' });
+        console.log(`[ERROR] ${Date.now() - startTime}ms - OCR.space TIMEOUT (both engines failed)`);
+        return res.status(504).json({ error: 'OCR timeout', message: 'OCR.space took too long (>50s total)' });
       }
       throw fetchError;
     }

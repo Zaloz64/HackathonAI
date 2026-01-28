@@ -1,6 +1,6 @@
 // API Configuration
 // CHANGE THIS to your ngrok URL or local IP
-export const API_URL = 'http://127.0.0.1:4040';
+export const API_URL = 'https://beatriz-satisfiable-topologically.ngrok-free.dev';
 
 // Personas with their allergies
 export const PERSONAS = [

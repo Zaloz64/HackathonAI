@@ -1,4 +1,10 @@
 // Navigation styles (TopNavigation, BottomNavigation, PersonaBar)
+// Color palette:
+// Primary (dark green): #5F8A5F
+// Secondary (light sage): #9DBB97
+// Accent (medium sage): #9FBE9A
+// Background (cream): #F4F0E2
+
 export const navigationStyles = {
   // Top Navigation Pills
   topBar: {
@@ -7,16 +13,16 @@ export const navigationStyles = {
     paddingHorizontal: 20,
     paddingVertical: 15,
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#F4F0E2',
   },
   topPill: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#e8e8e8',
+    backgroundColor: '#9FBE9A',
   },
   topPillActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#5F8A5F',
   },
   topPillText: {
     fontSize: 14,
@@ -34,21 +40,21 @@ export const navigationStyles = {
     paddingHorizontal: 20,
     paddingVertical: 10,
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#F4F0E2',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#9DBB97',
   },
   personaPill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#9DBB97',
   },
   personaPillActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#5F8A5F',
+    borderColor: '#5F8A5F',
   },
   personaPillText: {
     fontSize: 14,
@@ -63,11 +69,11 @@ export const navigationStyles = {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#F4F0E2',
     paddingVertical: 10,
     paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#9DBB97',
   },
   navItem: {
     alignItems: 'center',
@@ -79,7 +85,7 @@ export const navigationStyles = {
     marginTop: 4,
   },
   navLabelActive: {
-    color: '#007AFF',
+    color: '#5F8A5F',
   },
 
   // Scan Button (in bottom nav)
@@ -93,7 +99,7 @@ export const navigationStyles = {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#5F8A5F',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -106,7 +112,7 @@ export const navigationStyles = {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#5F8A5F',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

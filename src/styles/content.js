@@ -1,9 +1,15 @@
 // Main content area styles (MainContent component)
+// Color palette:
+// Primary (dark green): #5F8A5F
+// Secondary (light sage): #9DBB97
+// Accent (medium sage): #9FBE9A
+// Background (cream): #F4F0E2
+
 export const contentStyles = {
   // Main Content Area
   mainContent: {
     flex: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#9DBB97',
     margin: 15,
     borderRadius: 12,
     overflow: 'hidden',
@@ -16,13 +22,13 @@ export const contentStyles = {
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: '#666',
+    color: '#5F8A5F',
   },
 
   // Scan Preview
   scanPreview: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F4F0E2',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -38,7 +44,7 @@ export const contentStyles = {
     resizeMode: 'cover',
   },
   imageOverlay: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: 'rgba(244,240,226,0.9)',
     paddingHorizontal: 30,
     paddingVertical: 20,
     borderRadius: 12,
@@ -60,18 +66,18 @@ export const contentStyles = {
   },
   scanHint: {
     fontSize: 18,
-    color: '#666',
+    color: '#5F8A5F',
     fontWeight: '500',
     marginTop: 15,
   },
   scanSubHint: {
     fontSize: 14,
-    color: '#999',
+    color: '#9DBB97',
     marginTop: 5,
   },
   selectedPersonasHint: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#5F8A5F',
     marginTop: 15,
     textAlign: 'center',
   },
@@ -80,7 +86,7 @@ export const contentStyles = {
     bottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#9FBE9A',
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
@@ -91,9 +97,65 @@ export const contentStyles = {
     color: '#333',
   },
 
-  // Safety Overlay
+  // Scan Complete Container
+  scanCompleteContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Safety Result - Clean Display (new design)
+  safetyResultContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  safeIconLarge: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  unsafeIconLarge: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  safetyResultText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  unsafeReasonBlock: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  unsafeReasonItem: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 4,
+  },
+  viewDetailsLink: {
+    marginTop: 20,
+    paddingVertical: 10,
+  },
+  viewDetailsLinkText: {
+    fontSize: 14,
+    color: '#5F8A5F',
+    textDecorationLine: 'underline',
+  },
+
+  // Safety Overlay (legacy - kept for compatibility)
   safetyOverlay: {
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(95,138,95,0.9)',
     padding: 30,
     borderRadius: 12,
     alignItems: 'center',
@@ -103,7 +165,7 @@ export const contentStyles = {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#34C759',
+    backgroundColor: '#5F8A5F',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
