@@ -16,7 +16,7 @@ export default function FriendsPage({ onBack, onOpenFriend }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.85}>
-          <Ionicons name="chevron-back" size={22} color="#111" />
+          <Ionicons name="chevron-back" size={22} color="#F4F0E2" />
           <Text style={styles.backText}>Events</Text>
         </TouchableOpacity>
 
@@ -39,9 +39,20 @@ export default function FriendsPage({ onBack, onOpenFriend }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5", paddingHorizontal: 16, paddingTop: 12 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  container: { flex: 1, backgroundColor: "#F4F0E2" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 14,
+    backgroundColor: "#5F8A5F",
+    borderBottomWidth: 1,
+    borderBottomColor: "#9DBB97",
+    marginBottom: 0,
+  },
   backBtn: { flexDirection: "row", alignItems: "center", width: 72 },
-  backText: { fontSize: 14, fontWeight: "700", color: "#111" },
-  title: { fontSize: 18, fontWeight: "800", color: "#111" },
+  backText: { fontSize: 14, fontWeight: "700", color: "#F4F0E2" },
+  title: { fontSize: 18, fontWeight: "800", color: "#F4F0E2" },
 });

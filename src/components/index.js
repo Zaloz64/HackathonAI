@@ -12,3 +12,4 @@ export { default as SocialsPage } from './SocialsPage';
 export { default as FriendProfile } from './FriendProfile';
 export { default as FriendsPage } from './FriendsPage';
 export { default as EventsBar } from './EventsBar';
+export { default as EventDetailPage } from './EventDetailPage';

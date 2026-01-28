@@ -14,7 +14,7 @@ export default function FriendProfile({ friendId, onBack }) {
             {/* Keep header fixed */}
             <View style={styles.topBar}>
                 <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.85}>
-                    <Ionicons name="chevron-back" size={20} color="#0B0B0B" />
+                    <Ionicons name="chevron-back" size={20} color="#F4F0E2" />
                     <Text style={styles.backText}>Friends</Text>
                 </TouchableOpacity>
 
@@ -75,7 +75,7 @@ export default function FriendProfile({ friendId, onBack }) {
                     <View style={styles.favGrid}>
                         {(person.favorites?.length ? person.favorites : Array.from({ length: 6 }, (_, i) => ({ id: `p-${i}` }))).map((f) => (
                             <View key={f.id} style={styles.favTile}>
-                                <Ionicons name="heart-outline" size={16} color="#0B0B0B" style={styles.heart} />
+                                <Ionicons name="heart-outline" size={16} color="#fff" style={styles.heart} />
                             </View>
                         ))}
                     </View>
@@ -112,9 +112,9 @@ function Pill({ text, tone = "neutral" }) {
 }
 
 const toneStyles = {
-    neutral: { pill: { backgroundColor: "#E5E5EA" }, text: { color: "#0B0B0B" } },
-    warn: { pill: { backgroundColor: "#E5E5EA" }, text: { color: "#0B0B0B" } },
-    muted: { pill: { backgroundColor: "#EFEFF4" }, text: { color: "#6B7280" } },
+    neutral: { pill: { backgroundColor: "#E8F0E4", borderWidth: 1, borderColor: "#9DBB97" }, text: { color: "#5F8A5F" } },
+    warn: { pill: { backgroundColor: "#FFE5E5", borderWidth: 1, borderColor: "#FF6B6B" }, text: { color: "#D63031" } },
+    muted: { pill: { backgroundColor: "#F2F2F2", borderWidth: 1, borderColor: "#D6D6D6" }, text: { color: "#999" } },
 };
 
 function capitalize(s) {
@@ -123,17 +123,28 @@ function capitalize(s) {
 }
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F8FAF8", paddingHorizontal: 16, paddingTop: 12 },
+    screen: { flex: 1, backgroundColor: "#F4F0E2" },
 
-    topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+    topBar: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 14,
+        backgroundColor: "#5F8A5F",
+        borderBottomWidth: 1,
+        borderBottomColor: "#9DBB97",
+        marginBottom: 0,
+    },
     backBtn: { flexDirection: "row", alignItems: "center", width: 72 },
-    backText: { fontSize: 14, fontWeight: "700", color: "#0B0B0B" },
-    topTitle: { flex: 1, textAlign: "center", fontSize: 16, fontWeight: "800", color: "#0B0B0B" },
+    backText: { fontSize: 14, fontWeight: "700", color: "#F4F0E2" },
+    topTitle: { flex: 1, textAlign: "center", fontSize: 16, fontWeight: "800", color: "#F4F0E2" },
 
-    scrollContent: { paddingBottom: 20 },
+    scrollContent: { paddingBottom: 20, paddingHorizontal: 16 },
 
-    avatarWrap: { alignItems: "center", marginTop: 6, marginBottom: 12 },
-    avatarCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: "#D1D1D6" },
+    avatarWrap: { alignItems: "center", marginTop: 20, marginBottom: 12 },
+    avatarCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: "#9FBE9A" },
     qrBadge: {
         position: "absolute",
         right: 48,
@@ -141,26 +152,26 @@ const styles = StyleSheet.create({
         width: 22,
         height: 22,
         borderRadius: 6,
-        backgroundColor: "#E5E5EA",
+        backgroundColor: "#9DBB97",
         alignItems: "center",
         justifyContent: "center",
     },
-    qrText: { fontSize: 10, fontWeight: "900", color: "#0B0B0B" },
+    qrText: { fontSize: 10, fontWeight: "900", color: "#fff" },
 
-    card: { backgroundColor: "#E7F0E8", borderRadius: 14, padding: 12, marginBottom: 12 },
+    card: { backgroundColor: "#fff", borderRadius: 14, padding: 12, marginBottom: 12 },
 
-    username: { textAlign: "center", fontSize: 12, fontWeight: "700", color: "#0B0B0B", marginBottom: 2 },
-    fullName: { textAlign: "center", fontSize: 12, fontWeight: "700", color: "#0B0B0B" },
+    username: { textAlign: "center", fontSize: 12, fontWeight: "700", color: "#5F8A5F", marginBottom: 2 },
+    fullName: { textAlign: "center", fontSize: 12, fontWeight: "700", color: "#333" },
 
-    sectionTitle: { fontSize: 12, fontWeight: "800", color: "#0B0B0B", marginBottom: 10 },
+    sectionTitle: { fontSize: 12, fontWeight: "800", color: "#333", marginBottom: 10 },
     row: { marginBottom: 10 },
-    rowLabel: { fontSize: 11, fontWeight: "800", color: "#0B0B0B", marginBottom: 8 },
+    rowLabel: { fontSize: 11, fontWeight: "800", color: "#666", marginBottom: 8 },
     pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 
     pill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
     pillText: { fontSize: 12, fontWeight: "800" },
 
     favGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
-    favTile: { width: "31.5%", aspectRatio: 1, borderRadius: 12, backgroundColor: "#D1D1D6", position: "relative", overflow: "hidden" },
-    heart: { position: "absolute", top: 8, right: 8,  opacity: 0.9 },
+    favTile: { width: "31.5%", aspectRatio: 1, borderRadius: 12, backgroundColor: "#9DBB97", position: "relative", overflow: "hidden" },
+    heart: { position: "absolute", top: 8, right: 8, opacity: 0.9 },
 });

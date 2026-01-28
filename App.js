@@ -26,7 +26,8 @@ import {
   FriendProfile,
   FriendsPage,
   AllergenBar,
-  EventsBar
+  EventsBar,
+  EventDetailPage
 } from './src/components';
 
 // Styles
@@ -53,6 +54,7 @@ export default function App() {
   
   const [selectedAllergens, setSelectedAllergens] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
 
   // Toggle persona selection
@@ -211,8 +213,19 @@ export default function App() {
       case "events":
         return (
           <EventsPage
-            onAddEvent={() => console.log("Add event")}
             onOpenFriends={() => setActiveTab("friends")}
+            onOpenEvent={(event) => {
+              setSelectedEvent(event);
+              setActiveTab("eventDetail");
+            }}
+          />
+        );
+
+      case "eventDetail":
+        return (
+          <EventDetailPage
+            event={selectedEvent}
+            onBack={() => setActiveTab("events")}
           />
         );
 
