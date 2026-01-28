@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
-import './src/styles/global.scss';
 
 // Services
 import { fetchProduct, scanIngredientsImage, classifyAllergens } from './src/services/api';
@@ -23,6 +22,9 @@ import {
   IngredientsModal,
   ProfilePage,
   EventsPage,
+  SocialsPage,
+  FriendProfile,
+  FriendsPage
 } from './src/components';
 
 // Styles
@@ -44,6 +46,10 @@ export default function App() {
   const [selectedTopTab, setSelectedTopTab] = useState('persona');
   const [selectedPersonas, setSelectedPersonas] = useState([]);
   const [safetyResult, setSafetyResult] = useState(null);
+  //const [selectedFriend, setSelectedFriend] = useState(null);
+  const [selectedFriendId, setSelectedFriendId] = useState(null);
+  
+
 
   // Toggle persona selection
   const togglePersona = (personaId) => {
@@ -170,10 +176,32 @@ export default function App() {
   // Render page content based on active tab
   const renderPageContent = () => {
     switch (activeTab) {
-      case 'events':
-        return <EventsPage />;
-      case 'profile':
-        return <ProfilePage />;
+      case "events":
+        return (
+          <EventsPage
+            onAddEvent={() => console.log("Add event")}
+            onOpenFriends={() => setActiveTab("friends")}
+          />
+        );
+
+      case "friends":
+        return (
+          <FriendsPage
+            onBack={() => setActiveTab("events")}
+            onOpenFriend={(friend) => {
+              setSelectedFriendId(friend.id);
+              setActiveTab("friendProfile");
+            }}
+          />
+        );
+
+      case "friendProfile":
+        return (
+          <FriendProfile
+            friendId={selectedFriendId}
+            onBack={() => setActiveTab("friends")}
+          />
+        );
       default:
         return (
           <>
