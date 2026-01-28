@@ -7,3 +7,6 @@ export { default as ProductModal } from './ProductModal';
 export { default as IngredientsModal } from './IngredientsModal';
 export { default as ProfilePage } from './ProfilePage';
 export { default as EventsPage } from './EventsPage';
+export { default as SocialsPage } from './SocialsPage';
+export { default as FriendProfile } from './FriendProfile';
+export { default as FriendsPage } from './FriendsPage';
