@@ -1,9 +1,15 @@
 // Modal styles (ProductModal, IngredientsModal)
+// Color palette:
+// Primary (dark green): #5F8A5F
+// Secondary (light sage): #9DBB97
+// Accent (medium sage): #9FBE9A
+// Background (cream): #F4F0E2
+
 export const modalStyles = {
   // Modal Container
   modalScrollView: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F4F0E2',
   },
   productModalContainer: {
     padding: 20,
@@ -24,6 +30,7 @@ export const modalStyles = {
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 5,
+    color: '#333',
   },
   productBrand: {
     fontSize: 16,
@@ -47,16 +54,18 @@ export const modalStyles = {
   // Sections
   section: {
     width: '100%',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#9DBB97',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#5F8A5F',
   },
   sectionContent: {
     fontSize: 14,
@@ -70,7 +79,7 @@ export const modalStyles = {
     justifyContent: 'space-between',
     paddingVertical: 5,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#9DBB97',
   },
   nutrientLabel: {
     fontSize: 14,
@@ -97,7 +106,7 @@ export const modalStyles = {
   },
   ingredientBullet: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#5F8A5F',
     marginRight: 8,
     fontWeight: 'bold',
   },
@@ -111,7 +120,7 @@ export const modalStyles = {
   resultTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#5F8A5F',
     marginTop: 10,
     marginBottom: 5,
   },
@@ -134,7 +143,7 @@ export const modalStyles = {
     backgroundColor: '#E63E11',
   },
   allergenSafe: {
-    backgroundColor: '#038141',
+    backgroundColor: '#5F8A5F',
   },
   allergenBadgeText: {
     color: '#fff',
@@ -158,13 +167,13 @@ export const modalStyles = {
   confidenceBar: {
     flex: 1,
     height: 10,
-    backgroundColor: '#ddd',
+    backgroundColor: '#9DBB97',
     borderRadius: 5,
     overflow: 'hidden',
   },
   confidenceFill: {
     height: '100%',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#5F8A5F',
     borderRadius: 5,
   },
   confidenceValue: {
@@ -189,7 +198,7 @@ export const modalStyles = {
     borderRadius: 6,
     marginVertical: 4,
     borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#5F8A5F',
   },
   evidenceText: {
     fontSize: 13,
@@ -200,17 +209,17 @@ export const modalStyles = {
   // Allergen Section
   allergenSection: {
     width: '100%',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 15,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#9DBB97',
   },
   allergenSectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#5F8A5F',
     marginBottom: 10,
   },
   allergenRow: {
@@ -242,7 +251,7 @@ export const modalStyles = {
     backgroundColor: '#FF9500',
   },
   statusSafe: {
-    backgroundColor: '#038141',
+    backgroundColor: '#5F8A5F',
   },
   statusText: {
     color: '#fff',
@@ -255,7 +264,7 @@ export const modalStyles = {
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
+    borderTopColor: '#9DBB97',
   },
   evidenceTextSmall: {
     fontSize: 12,
