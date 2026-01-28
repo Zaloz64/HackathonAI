@@ -25,7 +25,7 @@ export const contentStyles = {
     color: '#5F8A5F',
   },
 
-  // Scan Preview
+  // Scan Preview (image container)
   scanPreview: {
     flex: 1,
     backgroundColor: '#F4F0E2',
@@ -34,14 +34,225 @@ export const contentStyles = {
     borderWidth: 3,
     borderColor: '#333',
     margin: 10,
+    marginBottom: 0,
     borderRadius: 8,
     overflow: 'hidden',
   },
+
+  // Image - lowest layer
   scannedImagePreview: {
     position: 'absolute',
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+    zIndex: 1,
+  },
+
+  // Blur overlay - on top of image
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2,
+  },
+
+  // Dim overlay - on top of blur
+  dimOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    zIndex: 3,
+  },
+
+  // Center icon overlay - on top of dim
+  centerIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+
+  // Result badge at top
+  resultBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  resultBadgeSafe: {
+    backgroundColor: 'rgba(95,138,95,0.92)',
+  },
+  resultBadgeUnsafe: {
+    backgroundColor: 'rgba(211,47,47,0.92)',
+  },
+  resultBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  resultBadgeSubtext: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
+
+  // Checkmark and X circles
+  checkmarkCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: '#5F8A5F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  crossCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: '#D32F2F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+
+  // Select Persona Overlay (when image but no persona selected)
+  selectPersonaOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(244,240,226,0.9)',
+    zIndex: 10,
+  },
+  selectPersonaText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#5F8A5F',
+    marginTop: 12,
+  },
+  selectPersonaSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+
+  // Safety Message Container (below image)
+  safetyMessageContainer: {
+    backgroundColor: '#F4F0E2',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  safeMessage: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#5F8A5F',
+    textAlign: 'center',
+  },
+  unsafeMessage: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D32F2F',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  unsafeReasonText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  // Scan Frame (no image yet)
+  scanFrame: {
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  scanHint: {
+    fontSize: 18,
+    color: '#5F8A5F',
+    fontWeight: '500',
+    marginTop: 15,
+  },
+  scanSubHint: {
+    fontSize: 14,
+    color: '#9DBB97',
+    marginTop: 5,
+  },
+  selectedPersonasHint: {
+    fontSize: 14,
+    color: '#5F8A5F',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+
+  // View Details Link
+  viewDetailsLinkText: {
+    fontSize: 14,
+    color: '#5F8A5F',
+    textDecorationLine: 'underline',
+    // marginTop: 10,
+    position: 'relative',
+    bottom: 0,
+  },
+
+  // Legacy styles (kept for compatibility)
+  scannedImageBlurred: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    opacity: 0.6,
+    zIndex: 1,
+  },
+  safetyIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 10,
   },
   imageOverlay: {
     backgroundColor: 'rgba(244,240,226,0.9)',
@@ -61,26 +272,6 @@ export const contentStyles = {
     color: '#666',
     marginTop: 8,
   },
-  scanFrame: {
-    alignItems: 'center',
-  },
-  scanHint: {
-    fontSize: 18,
-    color: '#5F8A5F',
-    fontWeight: '500',
-    marginTop: 15,
-  },
-  scanSubHint: {
-    fontSize: 14,
-    color: '#9DBB97',
-    marginTop: 5,
-  },
-  selectedPersonasHint: {
-    fontSize: 14,
-    color: '#5F8A5F',
-    marginTop: 15,
-    textAlign: 'center',
-  },
   lastScanCard: {
     position: 'absolute',
     bottom: 20,
@@ -96,14 +287,10 @@ export const contentStyles = {
     fontSize: 14,
     color: '#333',
   },
-
-  // Scan Complete Container
   scanCompleteContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // Safety Result - Clean Display (new design)
   safetyResultContainer: {
     flex: 1,
     alignItems: 'center',
@@ -147,13 +334,6 @@ export const contentStyles = {
     marginTop: 20,
     paddingVertical: 10,
   },
-  viewDetailsLinkText: {
-    fontSize: 14,
-    color: '#5F8A5F',
-    textDecorationLine: 'underline',
-  },
-
-  // Safety Overlay (legacy - kept for compatibility)
   safetyOverlay: {
     backgroundColor: 'rgba(95,138,95,0.9)',
     padding: 30,

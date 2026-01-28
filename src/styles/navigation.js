@@ -11,7 +11,8 @@ export const navigationStyles = {
     flexDirection: 'row',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingTop: 50,
+    paddingBottom: 5,
     gap: 10,
     backgroundColor: '#F4F0E2',
   },
@@ -71,7 +72,7 @@ export const navigationStyles = {
     alignItems: 'center',
     backgroundColor: '#F4F0E2',
     paddingVertical: 10,
-    paddingBottom: 20,
+    paddingBottom: 30,
     borderTopWidth: 1,
     borderTopColor: '#9DBB97',
   },
@@ -121,4 +122,18 @@ export const navigationStyles = {
     shadowRadius: 4,
     elevation: 4,
   },
+  barWrapper: {
+  paddingVertical: 10,
+  backgroundColor: '#F4F0E2',
+  borderBottomWidth: 1,
+  borderBottomColor: '#9DBB97',
+},
+
+barContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 20,
+  gap: 10,
+},
+
 };

@@ -56,6 +56,40 @@ const MILK_KEYWORDS = [
   'herajauhe', 'mjolk', 'mjolksyra', 'juusto', 'kerma', 'voi'
 ];
 
+// Soy ingredients
+const SOY_KEYWORDS = [
+  'soja', 'soy', 'soya', 'sojaböna', 'soybean', 'sojaprotein', 'soy protein',
+  'sojalecithin', 'soy lecithin', 'sojamjöl', 'soy flour', 'edamame', 'tofu',
+  'sojasås', 'soy sauce', 'miso', 'tempeh', 'sojaböno'
+];
+
+// Egg ingredients
+const EGG_KEYWORDS = [
+  'ägg', 'egg', 'eggs', 'æg', 'æggehvide', 'äggvita', 'egg white',
+  'äggula', 'egg yolk', 'äggpulver', 'egg powder', 'albumin',
+  'ovalbumin', 'lysozym', 'lysozyme', 'majonnäs', 'mayonnaise',
+  'aggvita', 'aggula', 'agg'
+];
+
+// Nut ingredients
+const NUT_KEYWORDS = [
+  'nötter', 'notter', 'nuts', 'nøtter', 'nødder', 'mandel', 'almond',
+  'hasselnöt', 'hasselnot', 'hazelnut', 'valnöt', 'valnot', 'walnut',
+  'cashew', 'pistasch', 'pistachio', 'pecan', 'macadamia',
+  'jordnöt', 'jordnot', 'peanut', 'peanuts', 'jordnötter'
+];
+
+// Lactose ingredients
+const LACTOSE_KEYWORDS = [
+  'laktos', 'lactose', 'mjölksocker', 'milk sugar',
+  'laktoshaltig', 'lactose-containing'
+];
+
+// Lactose-free markers
+const LACTOSE_FREE_KEYWORDS = [
+  'laktosfri', 'laktosfritt', 'lactose free', 'lactose-free'
+];
+
 // Traces/cross-contamination phrases
 const TRACES_PHRASES = [
   'kan innehålla spår av', 'kan innehålla', 'spår av',
@@ -144,34 +178,91 @@ function localKeywordDetection(text) {
   const milkTracesMatches = findTracesPhrases(text, [...MILK_KEYWORDS, 'mjölk', 'milk', 'lactose']);
   const milkTraces = milkTracesMatches.length > 0;
 
-  // Calculate confidence
-  const glutenConfidence = glutenContains || glutenTraces
-    ? Math.min(0.9, 0.6 + (glutenMatches.length + glutenTracesMatches.length) * 0.1)
-    : 0.7;
-  const milkConfidence = milkContains || milkTraces
-    ? Math.min(0.9, 0.6 + (milkMatches.length + milkTracesMatches.length) * 0.1)
-    : 0.7;
+  // Find soy ingredients and traces
+  const soyMatches = findKeywordMatches(text, SOY_KEYWORDS);
+  const soyContains = soyMatches.length > 0;
+  const soyTracesMatches = findTracesPhrases(text, [...SOY_KEYWORDS, 'soja', 'soy']);
+  const soyTraces = soyTracesMatches.length > 0;
+
+  // Find egg ingredients and traces
+  const eggMatches = findKeywordMatches(text, EGG_KEYWORDS);
+  const eggContains = eggMatches.length > 0;
+  const eggTracesMatches = findTracesPhrases(text, [...EGG_KEYWORDS, 'ägg', 'egg']);
+  const eggTraces = eggTracesMatches.length > 0;
+
+  // Find nut ingredients and traces
+  const nutMatches = findKeywordMatches(text, NUT_KEYWORDS);
+  const nutContains = nutMatches.length > 0;
+  const nutTracesMatches = findTracesPhrases(text, [...NUT_KEYWORDS, 'nötter', 'nuts']);
+  const nutTraces = nutTracesMatches.length > 0;
+
+  // Find lactose ingredients and traces
+  const lactoseFreeMatches = findKeywordMatches(text, LACTOSE_FREE_KEYWORDS);
+  const isLactoseFree = lactoseFreeMatches.length > 0;
+  const lactoseMatches = findKeywordMatches(text, LACTOSE_KEYWORDS);
+  const lactoseContains = lactoseMatches.length > 0 && !isLactoseFree;
+  const lactoseTracesMatches = findTracesPhrases(text, [...LACTOSE_KEYWORDS, 'laktos', 'lactose']);
+  const lactoseTraces = lactoseTracesMatches.length > 0;
+
+  // Helper to calculate confidence
+  const calcConf = (matches, tracesMatches) =>
+    (matches.length > 0 || tracesMatches.length > 0)
+      ? Math.min(0.9, 0.6 + (matches.length + tracesMatches.length) * 0.1)
+      : 0.7;
 
   // Build notes
   const notes = [];
   if (isGlutenFree) notes.push('Marked gluten-free');
   if (glutenContains) notes.push(`Found ${glutenMatches.length} gluten ingredient(s)`);
   if (milkContains) notes.push(`Found ${milkMatches.length} milk ingredient(s)`);
+  if (soyContains) notes.push(`Found ${soyMatches.length} soy ingredient(s)`);
+  if (eggContains) notes.push(`Found ${eggMatches.length} egg ingredient(s)`);
+  if (nutContains) notes.push(`Found ${nutMatches.length} nut ingredient(s)`);
+  if (lactoseContains) notes.push(`Found ${lactoseMatches.length} lactose ingredient(s)`);
   if (glutenTraces) notes.push('Gluten traces warning found');
   if (milkTraces) notes.push('Milk traces warning found');
+  if (soyTraces) notes.push('Soy traces warning found');
+  if (eggTraces) notes.push('Egg traces warning found');
+  if (nutTraces) notes.push('Nut traces warning found');
+  if (lactoseTraces) notes.push('Lactose traces warning found');
+  if (isLactoseFree) notes.push('Marked lactose-free');
 
   return {
     gluten: {
       contains: glutenContains,
       traces: glutenTraces,
-      confidence: glutenConfidence,
+      confidence: calcConf(glutenMatches, glutenTracesMatches),
       evidence: [...glutenMatches, ...glutenTracesMatches, ...glutenFreeMatches].slice(0, 4)
     },
     milk: {
       contains: milkContains,
       traces: milkTraces,
-      confidence: milkConfidence,
+      confidence: calcConf(milkMatches, milkTracesMatches),
       evidence: [...milkMatches, ...milkTracesMatches].slice(0, 4)
+    },
+    soy: {
+      contains: soyContains,
+      traces: soyTraces,
+      confidence: calcConf(soyMatches, soyTracesMatches),
+      evidence: [...soyMatches, ...soyTracesMatches].slice(0, 4)
+    },
+    eggs: {
+      contains: eggContains,
+      traces: eggTraces,
+      confidence: calcConf(eggMatches, eggTracesMatches),
+      evidence: [...eggMatches, ...eggTracesMatches].slice(0, 4)
+    },
+    nuts: {
+      contains: nutContains,
+      traces: nutTraces,
+      confidence: calcConf(nutMatches, nutTracesMatches),
+      evidence: [...nutMatches, ...nutTracesMatches].slice(0, 4)
+    },
+    lactose: {
+      contains: lactoseContains,
+      traces: lactoseTraces,
+      confidence: calcConf(lactoseMatches, lactoseTracesMatches),
+      evidence: [...lactoseMatches, ...lactoseTracesMatches, ...lactoseFreeMatches].slice(0, 4)
     },
     method: 'keywords',
     notes: notes.join('; ') || 'No allergens detected'

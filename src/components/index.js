@@ -1,6 +1,7 @@
 export { default as Scanner } from './Scanner';
 export { default as TopNavigation } from './TopNavigation';
 export { default as PersonaBar } from './PersonaBar';
+export { default as AllergenBar } from './AllergenBar';
 export { default as MainContent } from './MainContent';
 export { default as BottomNavigation } from './BottomNavigation';
 export { default as ProductModal } from './ProductModal';
@@ -10,3 +11,4 @@ export { default as EventsPage } from './EventsPage';
 export { default as SocialsPage } from './SocialsPage';
 export { default as FriendProfile } from './FriendProfile';
 export { default as FriendsPage } from './FriendsPage';
+export { default as EventsBar } from './EventsBar';

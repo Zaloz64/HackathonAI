@@ -8,6 +8,7 @@ export default function IngredientsModal({
   scannedIngredients,
   allergenVerdict,
   analyzingAllergens,
+  safetyResult,
   onAnalyzeAllergens,
   onClose,
 }) {
@@ -20,11 +21,8 @@ export default function IngredientsModal({
     >
       <ScrollView style={styles.modalScrollView}>
         <View style={styles.productModalContainer}>
-          <Text style={styles.productName}>Scanned Text</Text>
+          <Text style={styles.productName}>More details</Text>
 
-          {ingredientsImage && (
-            <Image source={{ uri: ingredientsImage }} style={styles.productImage} />
-          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Extracted Text</Text>
@@ -51,63 +49,57 @@ export default function IngredientsModal({
             <>
               <Text style={styles.resultTitle}>Allergen Results</Text>
 
-              {/* Gluten Section */}
-              <View style={styles.allergenSection}>
-                <Text style={styles.allergenSectionTitle}>Gluten</Text>
-                <View style={styles.allergenRow}>
-                  <View style={styles.allergenIndicator}>
-                    <Text style={styles.allergenLabel}>Contains:</Text>
-                    <View style={[styles.statusBadge, allergenVerdict.gluten?.contains ? styles.statusDanger : styles.statusSafe]}>
-                      <Text style={styles.statusText}>{allergenVerdict.gluten?.contains ? 'YES' : 'NO'}</Text>
+              {/* People affected summary */}
+              {safetyResult && safetyResult.checkedPersonas && (
+                <View style={[styles.allergenSection, { marginBottom: 8 }]}>
+                  <Text style={styles.allergenSectionTitle}>
+                    {safetyResult.eventTitle
+                      ? `${safetyResult.eventTitle} — People`
+                      : 'People checked'}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: safetyResult.safe ? '#038141' : '#D32F2F', fontWeight: '700', marginBottom: 4 }}>
+                    {safetyResult.safe
+                      ? `Safe for all ${safetyResult.checkedPersonas.length} people`
+                      : `Unsafe for ${safetyResult.unsafeFor.length} of ${safetyResult.checkedPersonas.length} people`}
+                  </Text>
+                  {safetyResult.unsafeFor?.map((person, idx) => (
+                    <View key={idx} style={{ marginLeft: 8, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#D32F2F' }}>{person.name}</Text>
+                      {person.reasons.map((reason, rIdx) => (
+                        <Text key={rIdx} style={{ fontSize: 12, color: '#666', marginLeft: 8 }}>• {reason}</Text>
+                      ))}
                     </View>
-                  </View>
-                  <View style={styles.allergenIndicator}>
-                    <Text style={styles.allergenLabel}>Traces:</Text>
-                    <View style={[styles.statusBadge, allergenVerdict.gluten?.traces ? styles.statusWarning : styles.statusSafe]}>
-                      <Text style={styles.statusText}>{allergenVerdict.gluten?.traces ? 'YES' : 'NO'}</Text>
-                    </View>
-                  </View>
+                  ))}
                 </View>
-                {allergenVerdict.gluten?.evidence?.length > 0 && (
-                  <View style={styles.evidenceInline}>
-                    {allergenVerdict.gluten.evidence.map((item, index) => (
-                      <Text key={index} style={styles.evidenceTextSmall}>"{item}"</Text>
-                    ))}
-                  </View>
-                )}
-                <Text style={styles.confidenceSmall}>
-                  Confidence: {Math.round((allergenVerdict.gluten?.confidence || 0) * 100)}%
-                </Text>
-              </View>
+              )}
 
-              {/* Milk Section */}
-              <View style={styles.allergenSection}>
-                <Text style={styles.allergenSectionTitle}>Milk</Text>
-                <View style={styles.allergenRow}>
-                  <View style={styles.allergenIndicator}>
-                    <Text style={styles.allergenLabel}>Contains:</Text>
-                    <View style={[styles.statusBadge, allergenVerdict.milk?.contains ? styles.statusDanger : styles.statusSafe]}>
-                      <Text style={styles.statusText}>{allergenVerdict.milk?.contains ? 'YES' : 'NO'}</Text>
+              {/* All 6 allergen sections */}
+              {['gluten', 'milk', 'soy', 'eggs', 'nuts', 'lactose'].map(allergen => {
+                const entry = allergenVerdict[allergen];
+                if (!entry) return null;
+                return (
+                  <View key={allergen} style={styles.allergenSection}>
+                    <Text style={styles.allergenSectionTitle}>{allergen.charAt(0).toUpperCase() + allergen.slice(1)}</Text>
+                    <View style={styles.allergenRow}>
+                      <View style={styles.allergenIndicator}>
+                        <Text style={styles.allergenLabel}>Contains:</Text>
+                        <View style={[styles.statusBadge, entry.contains ? styles.statusDanger : styles.statusSafe]}>
+                          <Text style={styles.statusText}>{entry.contains ? 'YES' : 'NO'}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.allergenIndicator}>
+                        <Text style={styles.allergenLabel}>Traces:</Text>
+                        <View style={[styles.statusBadge, entry.traces ? styles.statusWarning : styles.statusSafe]}>
+                          <Text style={styles.statusText}>{entry.traces ? 'YES' : 'NO'}</Text>
+                        </View>
+                      </View>
                     </View>
+                    <Text style={styles.confidenceSmall}>
+                      Confidence: {Math.round((entry.confidence || 0) * 100)}%
+                    </Text>
                   </View>
-                  <View style={styles.allergenIndicator}>
-                    <Text style={styles.allergenLabel}>Traces:</Text>
-                    <View style={[styles.statusBadge, allergenVerdict.milk?.traces ? styles.statusWarning : styles.statusSafe]}>
-                      <Text style={styles.statusText}>{allergenVerdict.milk?.traces ? 'YES' : 'NO'}</Text>
-                    </View>
-                  </View>
-                </View>
-                {allergenVerdict.milk?.evidence?.length > 0 && (
-                  <View style={styles.evidenceInline}>
-                    {allergenVerdict.milk.evidence.map((item, index) => (
-                      <Text key={index} style={styles.evidenceTextSmall}>"{item}"</Text>
-                    ))}
-                  </View>
-                )}
-                <Text style={styles.confidenceSmall}>
-                  Confidence: {Math.round((allergenVerdict.milk?.confidence || 0) * 100)}%
-                </Text>
-              </View>
+                );
+              })}
 
               {/* Notes */}
               {allergenVerdict.notes && (

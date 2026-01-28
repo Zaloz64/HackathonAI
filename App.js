@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { SafeAreaView } from 'react-native';
+import { useState, useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { fetchProduct, scanIngredientsImage, classifyAllergens } from './src/services/api';
 
 // Utils
-import { checkSafetyForPersonas } from './src/utils/helpers';
+import { checkSafetyForPersonas, checkSafetyForDiet, checkSafetyForEvent } from './src/utils/helpers';
 
 // Components
 import {
@@ -24,7 +24,9 @@ import {
   EventsPage,
   SocialsPage,
   FriendProfile,
-  FriendsPage
+  FriendsPage,
+  AllergenBar,
+  EventsBar
 } from './src/components';
 
 // Styles
@@ -49,6 +51,8 @@ export default function App() {
   //const [selectedFriend, setSelectedFriend] = useState(null);
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   
+  const [selectedAllergens, setSelectedAllergens] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
 
   // Toggle persona selection
@@ -58,8 +62,35 @@ export default function App() {
         ? prev.filter(id => id !== personaId)
         : [...prev, personaId]
     );
-    setSafetyResult(null);
   };
+
+  const toggleAllergen = (allergen) => {
+    setSelectedAllergens(prev =>
+      prev.includes(allergen)
+        ? prev.filter(a => a !== allergen)
+        : [...prev, allergen]
+    );
+  };
+
+  const toggleEvent = (eventId) => {
+    setSelectedEventId(prev => (prev === eventId ? null : eventId));
+  };
+
+  // Recalculate safety when selection or allergen verdict updates
+  useEffect(() => {
+    if (allergenVerdict && selectedPersonas.length > 0) {
+      const safety = checkSafetyForPersonas(allergenVerdict, selectedPersonas);
+      setSafetyResult(safety);
+    } else if (allergenVerdict && selectedAllergens.length > 0) {
+      const safety = checkSafetyForDiet(allergenVerdict, selectedAllergens);
+      setSafetyResult(safety);
+    } else if (allergenVerdict && selectedEventId) {
+      const safety = checkSafetyForEvent(allergenVerdict, selectedEventId);
+      setSafetyResult(safety);
+    } else {
+      setSafetyResult(null);
+    }
+  }, [selectedPersonas, selectedAllergens, selectedEventId, allergenVerdict]);
 
   // Handle barcode scan
   const handleBarCodeScanned = async ({ data }) => {
@@ -119,14 +150,15 @@ export default function App() {
         const verdict = {
           gluten: scanResult.gluten,
           milk: scanResult.milk,
+          soy: scanResult.soy,
+          eggs: scanResult.eggs,
+          nuts: scanResult.nuts,
+          lactose: scanResult.lactose,
           method: scanResult.method,
           notes: scanResult.notes
         };
         setAllergenVerdict(verdict);
-
-        // Check safety for selected personas
-        const safety = checkSafetyForPersonas(verdict, selectedPersonas);
-        setSafetyResult(safety);
+        // Safety result is now calculated by useEffect when allergenVerdict changes
       } catch (error) {
         if (error.name === 'AbortError') {
           alert('Request timed out after 60s. Check backend logs.');
@@ -217,12 +249,27 @@ export default function App() {
                 onTogglePersona={togglePersona}
               />
             )}
+            {selectedTopTab === 'dietary' && (
+              <AllergenBar
+                selectedAllergens={selectedAllergens}
+                onToggleAllergen={toggleAllergen}
+              />
+            )}
+            {selectedTopTab === 'events' && (
+              <EventsBar
+                selectedEventId={selectedEventId}
+                onSelectEvent={toggleEvent}
+              />
+            )}
+
 
             <MainContent
               loading={loading}
               ingredientsImage={ingredientsImage}
               safetyResult={safetyResult}
               selectedPersonas={selectedPersonas}
+              selectedAllergens={selectedAllergens}
+              selectedEventId={selectedEventId}
               scannedIngredients={scannedIngredients}
               onViewDetails={() => setIngredientsModalVisible(true)}
             />
@@ -232,7 +279,7 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider style={styles.container}>
       {renderPageContent()}
 
       <BottomNavigation
@@ -255,11 +302,12 @@ export default function App() {
         scannedIngredients={scannedIngredients}
         allergenVerdict={allergenVerdict}
         analyzingAllergens={analyzingAllergens}
+        safetyResult={safetyResult}
         onAnalyzeAllergens={analyzeAllergens}
         onClose={() => setIngredientsModalVisible(false)}
       />
 
       <StatusBar style="dark" />
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
