@@ -1,28 +1,33 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { SafeAreaView } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
-import './src/styles/global.scss';
 
 // Services
 import { fetchProduct, scanIngredientsImage, classifyAllergens } from './src/services/api';
 
 // Utils
-import { checkSafetyForPersonas } from './src/utils/helpers';
+import { checkSafetyForPersonas, checkSafetyForDiet, checkSafetyForEvent } from './src/utils/helpers';
 
 // Components
 import {
   Scanner,
-  TopNavigation,
-  PersonaBar,
   MainContent,
   BottomNavigation,
   ProductModal,
   IngredientsModal,
   ProfilePage,
   EventsPage,
+  SocialsPage,
+  FriendProfile,
+  FriendsPage,
+  EventDetailPage,
+  ScanSettingsModal,
+  ShoppingList,
 } from './src/components';
 
 // Styles
@@ -41,9 +46,19 @@ export default function App() {
   const [ingredientsModalVisible, setIngredientsModalVisible] = useState(false);
   const [analyzingAllergens, setAnalyzingAllergens] = useState(false);
   const [activeTab, setActiveTab] = useState('scan');
-  const [selectedTopTab, setSelectedTopTab] = useState('persona');
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const [selectedPersonas, setSelectedPersonas] = useState([]);
   const [safetyResult, setSafetyResult] = useState(null);
+  //const [selectedFriend, setSelectedFriend] = useState(null);
+  const [selectedFriendId, setSelectedFriendId] = useState(null);
+  
+  const [selectedAllergens, setSelectedAllergens] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [scanSubTab, setScanSubTab] = useState('scanner'); // 'scanner' | 'shopping'
+  const [shoppingListGroups, setShoppingListGroups] = useState([]);
+  const [shoppingChatResponse, setShoppingChatResponse] = useState(null);
+
 
   // Toggle persona selection
   const togglePersona = (personaId) => {
@@ -52,8 +67,35 @@ export default function App() {
         ? prev.filter(id => id !== personaId)
         : [...prev, personaId]
     );
-    setSafetyResult(null);
   };
+
+  const toggleAllergen = (allergen) => {
+    setSelectedAllergens(prev =>
+      prev.includes(allergen)
+        ? prev.filter(a => a !== allergen)
+        : [...prev, allergen]
+    );
+  };
+
+  const toggleEvent = (eventId) => {
+    setSelectedEventId(prev => (prev === eventId ? null : eventId));
+  };
+
+  // Recalculate safety when selection or allergen verdict updates
+  useEffect(() => {
+    if (allergenVerdict && selectedPersonas.length > 0) {
+      const safety = checkSafetyForPersonas(allergenVerdict, selectedPersonas);
+      setSafetyResult(safety);
+    } else if (allergenVerdict && selectedAllergens.length > 0) {
+      const safety = checkSafetyForDiet(allergenVerdict, selectedAllergens);
+      setSafetyResult(safety);
+    } else if (allergenVerdict && selectedEventId) {
+      const safety = checkSafetyForEvent(allergenVerdict, selectedEventId);
+      setSafetyResult(safety);
+    } else {
+      setSafetyResult(null);
+    }
+  }, [selectedPersonas, selectedAllergens, selectedEventId, allergenVerdict]);
 
   // Handle barcode scan
   const handleBarCodeScanned = async ({ data }) => {
@@ -113,14 +155,15 @@ export default function App() {
         const verdict = {
           gluten: scanResult.gluten,
           milk: scanResult.milk,
+          soy: scanResult.soy,
+          eggs: scanResult.eggs,
+          nuts: scanResult.nuts,
+          lactose: scanResult.lactose,
           method: scanResult.method,
           notes: scanResult.notes
         };
         setAllergenVerdict(verdict);
-
-        // Check safety for selected personas
-        const safety = checkSafetyForPersonas(verdict, selectedPersonas);
-        setSafetyResult(safety);
+        // Safety result is now calculated by useEffect when allergenVerdict changes
       } catch (error) {
         if (error.name === 'AbortError') {
           alert('Request timed out after 60s. Check backend logs.');
@@ -170,41 +213,141 @@ export default function App() {
   // Render page content based on active tab
   const renderPageContent = () => {
     switch (activeTab) {
-      case 'events':
-        return <EventsPage />;
-      case 'profile':
+      case "events":
+        return (
+          <EventsPage
+            onOpenFriends={() => setActiveTab("friends")}
+            onOpenEvent={(event) => {
+              setSelectedEvent(event);
+              setActiveTab("eventDetail");
+            }}
+          />
+        );
+
+      case "eventDetail":
+        return (
+          <EventDetailPage
+            event={selectedEvent}
+            onBack={() => setActiveTab("events")}
+          />
+        );
+
+      case "friends":
+        return (
+          <FriendsPage
+            onBack={() => setActiveTab("events")}
+            onOpenFriend={(friend) => {
+              setSelectedFriendId(friend.id);
+              setActiveTab("friendProfile");
+            }}
+          />
+        );
+
+      case "friendProfile":
+        return (
+          <FriendProfile
+            friendId={selectedFriendId}
+            onBack={() => setActiveTab("friends")}
+          />
+        );
+      case "profile":
         return <ProfilePage />;
-      default:
+      default: {
+        const filterCount = selectedPersonas.length + selectedAllergens.length + (selectedEventId ? 1 : 0);
         return (
           <>
-            <TopNavigation
-              selectedTab={selectedTopTab}
-              onSelectTab={setSelectedTopTab}
-              personaCount={selectedPersonas.length}
-            />
+            {/* Header */}
+            <View style={{
+              backgroundColor: '#5F8A5F',
+              paddingTop: 60,
+              paddingBottom: 12,
+              paddingHorizontal: 20,
+            }}>
+              {/* Title row */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: '#F4F0E2' }}>Food Scanner</Text>
+                <TouchableOpacity
+                  onPress={() => setSettingsVisible(true)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center',
+                    backgroundColor: '#9DBB97', borderRadius: 20,
+                    paddingHorizontal: 14, paddingVertical: 8, gap: 6,
+                  }}
+                >
+                  <Ionicons name="options" size={16} color="#F4F0E2" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F4F0E2' }}>
+                    Filters{filterCount > 0 ? ` (${filterCount})` : ''}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            {selectedTopTab === 'persona' && (
-              <PersonaBar
+              {/* Sub-tab toggle */}
+              <View style={{
+                flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.15)',
+                borderRadius: 12, padding: 3,
+              }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                    backgroundColor: scanSubTab === 'scanner' ? '#F4F0E2' : 'transparent',
+                  }}
+                  onPress={() => setScanSubTab('scanner')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{
+                    fontSize: 14, fontWeight: '700',
+                    color: scanSubTab === 'scanner' ? '#3D6B3D' : '#F4F0E2',
+                  }}>Scanner</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                    backgroundColor: scanSubTab === 'shopping' ? '#F4F0E2' : 'transparent',
+                  }}
+                  onPress={() => setScanSubTab('shopping')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{
+                    fontSize: 14, fontWeight: '700',
+                    color: scanSubTab === 'shopping' ? '#3D6B3D' : '#F4F0E2',
+                  }}>Shopping List</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Content */}
+            {scanSubTab === 'scanner' ? (
+              <MainContent
+                loading={loading}
+                ingredientsImage={ingredientsImage}
+                safetyResult={safetyResult}
                 selectedPersonas={selectedPersonas}
-                onTogglePersona={togglePersona}
+                selectedAllergens={selectedAllergens}
+                selectedEventId={selectedEventId}
+                scannedIngredients={scannedIngredients}
+                onViewDetails={() => setIngredientsModalVisible(true)}
+              />
+            ) : (
+              <ShoppingList
+                selectedPersonas={selectedPersonas}
+                selectedAllergens={selectedAllergens}
+                selectedEventId={selectedEventId}
+                listGroups={shoppingListGroups}
+                setListGroups={setShoppingListGroups}
+                chatResponse={shoppingChatResponse}
+                setChatResponse={setShoppingChatResponse}
               />
             )}
-
-            <MainContent
-              loading={loading}
-              ingredientsImage={ingredientsImage}
-              safetyResult={safetyResult}
-              selectedPersonas={selectedPersonas}
-              scannedIngredients={scannedIngredients}
-              onViewDetails={() => setIngredientsModalVisible(true)}
-            />
           </>
         );
+      }
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider style={styles.container}>
       {renderPageContent()}
 
       <BottomNavigation
@@ -227,11 +370,23 @@ export default function App() {
         scannedIngredients={scannedIngredients}
         allergenVerdict={allergenVerdict}
         analyzingAllergens={analyzingAllergens}
+        safetyResult={safetyResult}
         onAnalyzeAllergens={analyzeAllergens}
         onClose={() => setIngredientsModalVisible(false)}
       />
 
+      <ScanSettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        selectedPersonas={selectedPersonas}
+        onTogglePersona={togglePersona}
+        selectedAllergens={selectedAllergens}
+        onToggleAllergen={toggleAllergen}
+        selectedEventId={selectedEventId}
+        onSelectEvent={toggleEvent}
+      />
+
       <StatusBar style="dark" />
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

@@ -19,20 +19,20 @@ export default function BottomNavigation({
         <Ionicons
           name={activeTab === 'events' ? 'calendar' : 'calendar-outline'}
           size={28}
-          color={activeTab === 'events' ? '#007AFF' : '#8E8E93'}
+          color={activeTab === 'events' ? '#5F8A5F' : '#8E8E93'}
         />
         <Text style={[styles.navLabel, activeTab === 'events' && styles.navLabelActive]}>Events</Text>
       </TouchableOpacity>
 
       {/* Center Scan Button */}
       <TouchableOpacity
-        style={styles.scanButton}
-        onPress={onScanPress}
-        onLongPress={onScanLongPress}
+        style={activeTab === 'scan' ? styles.scanButton : styles.scanButtonSmall}
+        onPress={activeTab === 'scan' ? onScanPress : () => onSelectTab('scan')}
+        onLongPress={activeTab === 'scan' ? onScanLongPress : undefined}
         disabled={loading}
       >
-        <View style={styles.scanButtonInner}>
-          <Ionicons name="scan" size={32} color="#fff" />
+        <View style={activeTab === 'scan' ? styles.scanButtonInner : styles.scanButtonInnerSmall}>
+          <Ionicons name="scan" size={activeTab === 'scan' ? 32 : 24} color="#fff" />
         </View>
       </TouchableOpacity>
 
@@ -43,7 +43,7 @@ export default function BottomNavigation({
         <Ionicons
           name={activeTab === 'profile' ? 'person' : 'person-outline'}
           size={28}
-          color={activeTab === 'profile' ? '#007AFF' : '#8E8E93'}
+          color={activeTab === 'profile' ? '#5F8A5F' : '#8E8E93'}
         />
         <Text style={[styles.navLabel, activeTab === 'profile' && styles.navLabelActive]}>Profile</Text>
       </TouchableOpacity>

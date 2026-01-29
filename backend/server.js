@@ -13,11 +13,21 @@ const PORT = process.env.PORT || 3001;
 
 // Initialize OpenAI client (only if API key is available)
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 8000 })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 30000 })
   : null;
 
 // Set to true to skip LLM and use fast keyword detection only
 const USE_KEYWORDS_ONLY = process.env.USE_KEYWORDS_ONLY === 'true';
+
+// Set to true to use mock data instead of real OCR (for development)
+const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'false' || false; // Set to true for dev
+
+// Mock ingredients list with various allergens for testing
+const MOCK_INGREDIENTS = `Ingredienser: Vetemjöl, vatten, socker, rapsolja,
+jäst, salt, mjölkpulver, vasslepulver, emulgeringsmedel (E471, E472e),
+mjölksyra, konserveringsmedel (kalciumpropionat).
+Kan innehålla spår av soja, ägg och nötter.
+Glutenfri: Nej`;
 
 // === KEYWORD PATTERNS ===
 
@@ -44,6 +54,40 @@ const MILK_KEYWORDS = [
   'vasslepulver', 'vallepulver', 'mysepulver', 'ostpulver',
   'mjölksyra', 'mælkesyre', 'melkesyre', 'maidosta', 'maito',
   'herajauhe', 'mjolk', 'mjolksyra', 'juusto', 'kerma', 'voi'
+];
+
+// Soy ingredients
+const SOY_KEYWORDS = [
+  'soja', 'soy', 'soya', 'sojaböna', 'soybean', 'sojaprotein', 'soy protein',
+  'sojalecithin', 'soy lecithin', 'sojamjöl', 'soy flour', 'edamame', 'tofu',
+  'sojasås', 'soy sauce', 'miso', 'tempeh', 'sojaböno'
+];
+
+// Egg ingredients
+const EGG_KEYWORDS = [
+  'ägg', 'egg', 'eggs', 'æg', 'æggehvide', 'äggvita', 'egg white',
+  'äggula', 'egg yolk', 'äggpulver', 'egg powder', 'albumin',
+  'ovalbumin', 'lysozym', 'lysozyme', 'majonnäs', 'mayonnaise',
+  'aggvita', 'aggula', 'agg'
+];
+
+// Nut ingredients
+const NUT_KEYWORDS = [
+  'nötter', 'notter', 'nuts', 'nøtter', 'nødder', 'mandel', 'almond',
+  'hasselnöt', 'hasselnot', 'hazelnut', 'valnöt', 'valnot', 'walnut',
+  'cashew', 'pistasch', 'pistachio', 'pecan', 'macadamia',
+  'jordnöt', 'jordnot', 'peanut', 'peanuts', 'jordnötter'
+];
+
+// Lactose ingredients
+const LACTOSE_KEYWORDS = [
+  'laktos', 'lactose', 'mjölksocker', 'milk sugar',
+  'laktoshaltig', 'lactose-containing'
+];
+
+// Lactose-free markers
+const LACTOSE_FREE_KEYWORDS = [
+  'laktosfri', 'laktosfritt', 'lactose free', 'lactose-free'
 ];
 
 // Traces/cross-contamination phrases
@@ -134,34 +178,91 @@ function localKeywordDetection(text) {
   const milkTracesMatches = findTracesPhrases(text, [...MILK_KEYWORDS, 'mjölk', 'milk', 'lactose']);
   const milkTraces = milkTracesMatches.length > 0;
 
-  // Calculate confidence
-  const glutenConfidence = glutenContains || glutenTraces
-    ? Math.min(0.9, 0.6 + (glutenMatches.length + glutenTracesMatches.length) * 0.1)
-    : 0.7;
-  const milkConfidence = milkContains || milkTraces
-    ? Math.min(0.9, 0.6 + (milkMatches.length + milkTracesMatches.length) * 0.1)
-    : 0.7;
+  // Find soy ingredients and traces
+  const soyMatches = findKeywordMatches(text, SOY_KEYWORDS);
+  const soyContains = soyMatches.length > 0;
+  const soyTracesMatches = findTracesPhrases(text, [...SOY_KEYWORDS, 'soja', 'soy']);
+  const soyTraces = soyTracesMatches.length > 0;
+
+  // Find egg ingredients and traces
+  const eggMatches = findKeywordMatches(text, EGG_KEYWORDS);
+  const eggContains = eggMatches.length > 0;
+  const eggTracesMatches = findTracesPhrases(text, [...EGG_KEYWORDS, 'ägg', 'egg']);
+  const eggTraces = eggTracesMatches.length > 0;
+
+  // Find nut ingredients and traces
+  const nutMatches = findKeywordMatches(text, NUT_KEYWORDS);
+  const nutContains = nutMatches.length > 0;
+  const nutTracesMatches = findTracesPhrases(text, [...NUT_KEYWORDS, 'nötter', 'nuts']);
+  const nutTraces = nutTracesMatches.length > 0;
+
+  // Find lactose ingredients and traces
+  const lactoseFreeMatches = findKeywordMatches(text, LACTOSE_FREE_KEYWORDS);
+  const isLactoseFree = lactoseFreeMatches.length > 0;
+  const lactoseMatches = findKeywordMatches(text, LACTOSE_KEYWORDS);
+  const lactoseContains = lactoseMatches.length > 0 && !isLactoseFree;
+  const lactoseTracesMatches = findTracesPhrases(text, [...LACTOSE_KEYWORDS, 'laktos', 'lactose']);
+  const lactoseTraces = lactoseTracesMatches.length > 0;
+
+  // Helper to calculate confidence
+  const calcConf = (matches, tracesMatches) =>
+    (matches.length > 0 || tracesMatches.length > 0)
+      ? Math.min(0.9, 0.6 + (matches.length + tracesMatches.length) * 0.1)
+      : 0.7;
 
   // Build notes
   const notes = [];
   if (isGlutenFree) notes.push('Marked gluten-free');
   if (glutenContains) notes.push(`Found ${glutenMatches.length} gluten ingredient(s)`);
   if (milkContains) notes.push(`Found ${milkMatches.length} milk ingredient(s)`);
+  if (soyContains) notes.push(`Found ${soyMatches.length} soy ingredient(s)`);
+  if (eggContains) notes.push(`Found ${eggMatches.length} egg ingredient(s)`);
+  if (nutContains) notes.push(`Found ${nutMatches.length} nut ingredient(s)`);
+  if (lactoseContains) notes.push(`Found ${lactoseMatches.length} lactose ingredient(s)`);
   if (glutenTraces) notes.push('Gluten traces warning found');
   if (milkTraces) notes.push('Milk traces warning found');
+  if (soyTraces) notes.push('Soy traces warning found');
+  if (eggTraces) notes.push('Egg traces warning found');
+  if (nutTraces) notes.push('Nut traces warning found');
+  if (lactoseTraces) notes.push('Lactose traces warning found');
+  if (isLactoseFree) notes.push('Marked lactose-free');
 
   return {
     gluten: {
       contains: glutenContains,
       traces: glutenTraces,
-      confidence: glutenConfidence,
+      confidence: calcConf(glutenMatches, glutenTracesMatches),
       evidence: [...glutenMatches, ...glutenTracesMatches, ...glutenFreeMatches].slice(0, 4)
     },
     milk: {
       contains: milkContains,
       traces: milkTraces,
-      confidence: milkConfidence,
+      confidence: calcConf(milkMatches, milkTracesMatches),
       evidence: [...milkMatches, ...milkTracesMatches].slice(0, 4)
+    },
+    soy: {
+      contains: soyContains,
+      traces: soyTraces,
+      confidence: calcConf(soyMatches, soyTracesMatches),
+      evidence: [...soyMatches, ...soyTracesMatches].slice(0, 4)
+    },
+    eggs: {
+      contains: eggContains,
+      traces: eggTraces,
+      confidence: calcConf(eggMatches, eggTracesMatches),
+      evidence: [...eggMatches, ...eggTracesMatches].slice(0, 4)
+    },
+    nuts: {
+      contains: nutContains,
+      traces: nutTraces,
+      confidence: calcConf(nutMatches, nutTracesMatches),
+      evidence: [...nutMatches, ...nutTracesMatches].slice(0, 4)
+    },
+    lactose: {
+      contains: lactoseContains,
+      traces: lactoseTraces,
+      confidence: calcConf(lactoseMatches, lactoseTracesMatches),
+      evidence: [...lactoseMatches, ...lactoseTracesMatches, ...lactoseFreeMatches].slice(0, 4)
     },
     method: 'keywords',
     notes: notes.join('; ') || 'No allergens detected'
@@ -279,35 +380,89 @@ app.post('/api/scan', async (req, res) => {
     const imageSize = Math.round(image.length / 1024);
     console.log(`[STEP 2] Image received - Size: ${imageSize}KB`);
 
+    // Use mock data for development
+    if (USE_MOCK_DATA) {
+      console.log(`[STEP 3] Using MOCK DATA (OCR bypassed)`);
+
+      const extractedText = MOCK_INGREDIENTS;
+      const classification = localKeywordDetection(extractedText);
+
+      console.log(`[STEP 4] ${Date.now() - startTime}ms - Mock classification done`);
+      console.log('========== SCAN COMPLETE (MOCK) ==========\n');
+
+      return res.json({
+        text: extractedText,
+        ...classification,
+        timing: {
+          total_ms: Date.now() - startTime
+        },
+        mock: true
+      });
+    }
+
     // Prepare OCR request
     const base64Image = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
-    const formData = new URLSearchParams();
-    formData.append('base64Image', base64Image);
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
-    formData.append('OCREngine', '1');
-    formData.append('scale', 'true');
-    formData.append('detectOrientation', 'false');
 
-    console.log(`[STEP 3] ${Date.now() - startTime}ms - Sending to OCR.space...`);
+    // Helper function to make OCR request
+    const makeOCRRequest = async (engine, timeoutMs) => {
+      const formData = new URLSearchParams();
+      formData.append('base64Image', base64Image);
+      formData.append('language', 'eng');
+      formData.append('isOverlayRequired', 'false');
+      formData.append('OCREngine', engine);
+      formData.append('scale', 'true');
+      formData.append('detectOrientation', 'false');
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      console.log('[TIMEOUT] OCR.space timeout after 30s - aborting');
-      controller.abort();
-    }, 30000);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch('https://api.ocr.space/parse/image', {
+          method: 'POST',
+          headers: {
+            'apikey': OCR_API_KEY,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        return response;
+      } catch (err) {
+        clearTimeout(timeout);
+        throw err;
+      }
+    };
+
+    console.log(`[STEP 3] ${Date.now() - startTime}ms - Sending to OCR.space (Engine 2)...`);
+
+    let ocrResponse;
+    try {
+      // Try Engine 2 first (faster for photos)
+      ocrResponse = await makeOCRRequest('2', 25000);
+
+      // If Engine 2 fails or times out, try Engine 1
+      const result = await ocrResponse.json();
+      if (!result.ParsedResults || !result.ParsedResults[0] || result.IsErroredOnProcessing) {
+        console.log(`[STEP 3b] ${Date.now() - startTime}ms - Engine 2 failed, trying Engine 1...`);
+        ocrResponse = await makeOCRRequest('1', 25000);
+      } else {
+        // Engine 2 worked, reconstruct response-like object
+        ocrResponse = {
+          status: 200,
+          json: async () => result
+        };
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log(`[STEP 3b] ${Date.now() - startTime}ms - Engine 2 timeout, trying Engine 1...`);
+        ocrResponse = await makeOCRRequest('1', 25000);
+      } else {
+        throw err;
+      }
+    }
 
     try {
-      const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
-        method: 'POST',
-        headers: {
-          'apikey': OCR_API_KEY,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
 
       console.log(`[STEP 4] ${Date.now() - startTime}ms - OCR.space responded (status: ${ocrResponse.status})`);
 
@@ -347,10 +502,9 @@ app.post('/api/scan', async (req, res) => {
       res.json(response);
 
     } catch (fetchError) {
-      clearTimeout(timeout);
       if (fetchError.name === 'AbortError') {
-        console.log(`[ERROR] ${Date.now() - startTime}ms - OCR.space TIMEOUT`);
-        return res.status(504).json({ error: 'OCR timeout', message: 'OCR.space took too long (>30s)' });
+        console.log(`[ERROR] ${Date.now() - startTime}ms - OCR.space TIMEOUT (both engines failed)`);
+        return res.status(504).json({ error: 'OCR timeout', message: 'OCR.space took too long (>50s total)' });
       }
       throw fetchError;
     }
@@ -382,6 +536,101 @@ app.post('/api/ping', (_req, res) => {
   console.log('[PING POST] Ping POST received from client');
   res.json({ pong: true, time: Date.now() });
 });
+
+// Recipe assistant endpoint
+app.post('/api/recipe', async (req, res) => {
+  const { query, dietary_context, servings } = req.body;
+  const numServings = servings || 2;
+  console.log(`[RECIPE] Query: "${query}" | Servings: ${numServings} | Context: "${dietary_context}"`);
+
+  if (!query) {
+    return res.status(400).json({ error: 'Missing query' });
+  }
+
+  // If OpenAI is available, use it
+  if (openai) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful recipe assistant for people with dietary restrictions.
+Given a user's request and their dietary context, suggest a recipe that is safe for everyone mentioned.
+
+IMPORTANT RULES:
+- Scale the recipe for exactly ${numServings} servings/people.
+- Use ONLY European/metric measurements (grams, kilograms, millilitres, litres, degrees Celsius). Never use cups, ounces, pounds, or Fahrenheit.
+
+You MUST respond with valid JSON in this exact format:
+{
+  "name": "Recipe Name (${numServings} servings)",
+  "description": "Brief description of the dish",
+  "ingredients": [
+    {"item": "ingredient name", "amount": "quantity in metric", "warning": "optional allergen note or null"}
+  ],
+  "instructions": "Brief cooking instructions as a single string",
+  "shopping_tips": ["tip 1", "tip 2"],
+  "dietary_notes": "Summary of how this recipe accommodates the dietary restrictions"
+}
+
+Make sure ingredients that need allergen-free versions have a warning field explaining what to buy instead.
+Keep it concise and practical. Return ONLY valid JSON, no markdown.`
+          },
+          {
+            role: 'user',
+            content: `Dietary context: ${dietary_context || 'No restrictions.'}\nNumber of people: ${numServings}\n\nRequest: ${query}`
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      });
+
+      const raw = completion.choices[0]?.message?.content || '';
+      console.log(`[RECIPE] Generated ${raw.length} chars`);
+
+      // Try to parse as JSON
+      try {
+        const parsed = JSON.parse(raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+        return res.json({
+          response: formatRecipeText(parsed),
+          recipe: parsed,
+        });
+      } catch (parseErr) {
+        // If not valid JSON, return raw text
+        console.log('[RECIPE] Could not parse JSON, returning raw text');
+        return res.json({ response: raw, recipe: null });
+      }
+    } catch (err) {
+      console.error('[RECIPE] OpenAI error:', err.message);
+      return res.status(500).json({ error: 'Could not generate recipe. AI service unavailable.' });
+    }
+  }
+
+  // No AI available
+  return res.status(503).json({ error: 'Recipe generation requires an AI service. Please configure OPENAI_API_KEY.' });
+});
+
+function formatRecipeText(recipe) {
+  if (!recipe || !recipe.name) return 'Could not generate recipe.';
+
+  let text = `🍽️ ${recipe.name}\n${recipe.description || ''}\n\n`;
+  text += `📝 Ingredients:\n`;
+  (recipe.ingredients || []).forEach((ing) => {
+    text += `• ${ing.amount ? ing.amount + ' ' : ''}${ing.item}`;
+    if (ing.warning) text += ` ⚠️ ${ing.warning}`;
+    text += '\n';
+  });
+  text += `\n👨‍🍳 Instructions:\n${recipe.instructions || ''}\n`;
+  if (recipe.shopping_tips?.length) {
+    text += `\n🛒 Shopping tips:\n`;
+    recipe.shopping_tips.forEach((tip) => { text += `• ${tip}\n`; });
+  }
+  if (recipe.dietary_notes) {
+    text += `\n⚠️ ${recipe.dietary_notes}`;
+  }
+  return text;
+}
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Allergen classifier backend running on http://0.0.0.0:${PORT}`);
