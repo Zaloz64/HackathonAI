@@ -44,9 +44,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 14,
+    paddingBottom: 20,
     backgroundColor: "#5F8A5F",
     borderBottomWidth: 1,
     borderBottomColor: "#9DBB97",
@@ -54,5 +54,5 @@ const styles = StyleSheet.create({
   },
   backBtn: { flexDirection: "row", alignItems: "center", width: 72 },
   backText: { fontSize: 14, fontWeight: "700", color: "#F4F0E2" },
-  title: { fontSize: 18, fontWeight: "800", color: "#F4F0E2" },
+  title: { fontSize: 20, fontWeight: "bold", color: "#F4F0E2" },
 });

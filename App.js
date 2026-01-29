@@ -56,6 +56,8 @@ export default function App() {
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [scanSubTab, setScanSubTab] = useState('scanner'); // 'scanner' | 'shopping'
+  const [shoppingListGroups, setShoppingListGroups] = useState([]);
+  const [shoppingChatResponse, setShoppingChatResponse] = useState(null);
 
 
   // Toggle persona selection
@@ -328,7 +330,15 @@ export default function App() {
                 onViewDetails={() => setIngredientsModalVisible(true)}
               />
             ) : (
-              <ShoppingList selectedPersonas={selectedPersonas} />
+              <ShoppingList
+                selectedPersonas={selectedPersonas}
+                selectedAllergens={selectedAllergens}
+                selectedEventId={selectedEventId}
+                listGroups={shoppingListGroups}
+                setListGroups={setShoppingListGroups}
+                chatResponse={shoppingChatResponse}
+                setChatResponse={setShoppingChatResponse}
+              />
             )}
           </>
         );

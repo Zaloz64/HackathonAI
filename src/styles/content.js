@@ -34,7 +34,6 @@ export const contentStyles = {
     borderWidth: 3,
     borderColor: '#333',
     margin: 10,
-    marginBottom: 0,
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -228,6 +227,7 @@ export const contentStyles = {
   viewDetailsLinkText: {
     fontSize: 14,
     color: '#5F8A5F',
+    
     textDecorationLine: 'underline',
     // marginTop: 10,
     position: 'relative',
