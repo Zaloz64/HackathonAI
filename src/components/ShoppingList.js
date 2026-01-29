@@ -45,6 +45,16 @@ function buildFilterContext(selectedPersonas, selectedAllergens, selectedEventId
   return parts.length ? parts.join('. ') : 'No dietary restrictions.';
 }
 
+// Calculate the number of servings based on active filters
+function getServings(selectedPersonas, selectedEventId) {
+  if (selectedEventId) {
+    const evt = EVENTS.find((e) => e.id === selectedEventId);
+    if (evt) return evt.invited.length;
+  }
+  if (selectedPersonas.length > 0) return selectedPersonas.length;
+  return 2; // default
+}
+
 export default function ShoppingList({
   selectedPersonas = [], selectedAllergens = [], selectedEventId = null,
   listGroups, setListGroups, chatResponse, setChatResponse,
@@ -124,6 +134,7 @@ export default function ShoppingList({
         body: JSON.stringify({
           query: trimmed,
           dietary_context: dietaryContext,
+          servings: getServings(selectedPersonas, selectedEventId),
         }),
         signal: controller.signal,
       });

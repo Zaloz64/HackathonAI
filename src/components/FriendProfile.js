@@ -3,175 +3,218 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-nati
 import { Ionicons } from "@expo/vector-icons";
 import { getPersonById } from "../config/people";
 
-export default function FriendProfile({ friendId, onBack }) {
-    const person = useMemo(() => getPersonById(friendId), [friendId]);
-    if (!person) return null;
-
-    const firstName = person.name?.split(" ")[0] || "Friend";
-
-    return (
-        <View style={styles.screen}>
-            {/* Keep header fixed */}
-            <View style={styles.topBar}>
-                <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.85}>
-                    <Ionicons name="chevron-back" size={20} color="#F4F0E2" />
-                    <Text style={styles.backText}>Friends</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.topTitle} numberOfLines={1}>
-                    {person.name}
-                </Text>
-
-                <View style={{ width: 72 }} />
-            </View>
-
-            {/* Make content scrollable */}
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                <View style={styles.avatarWrap}>
-                    <View style={styles.avatarCircle} />
-                    <View style={styles.qrBadge}>
-                        <Text style={styles.qrText}>QR</Text>
-                    </View>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.username}>@{person.username}</Text>
-                    <Text style={styles.fullName}>{person.name}</Text>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>{firstName}’s diet</Text>
-
-                    <InfoRow label="Dietary profile">
-                        {(person.dietaryProfile?.length ? person.dietaryProfile : ["None"]).map((t) => (
-                            <Pill key={t} text={t} tone={t === "None" ? "muted" : "neutral"} />
-                        ))}
-                    </InfoRow>
-
-                    <InfoRow label="Allergens">
-                        {(person.allergies?.length ? person.allergies : ["None"]).map((a) => (
-                            <Pill
-                                key={a}
-                                text={a === "None" ? "None" : capitalize(a)}
-                                tone={a === "None" ? "muted" : "warn"}
-                            />
-                        ))}
-                    </InfoRow>
-
-                    <InfoRow label="Dislikes">
-                        {(person.dislikes?.length ? person.dislikes : ["None"]).map((d) => (
-                            <Pill key={d} text={d} tone={d === "None" ? "muted" : "neutral"} />
-                        ))}
-                    </InfoRow>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>{firstName}’s favorites</Text>
-
-                    <View style={styles.favGrid}>
-                        {(person.favorites?.length ? person.favorites : Array.from({ length: 6 }, (_, i) => ({ id: `p-${i}` }))).map((f) => (
-                            <View key={f.id} style={styles.favTile}>
-                                <Ionicons name="heart-outline" size={16} color="#fff" style={styles.heart} />
-                            </View>
-                        ))}
-                    </View>
-                </View>
-
-                {/* extra space so last card isn't tight to bottom */}
-                <View style={{ height: 16 }} />
-            </ScrollView>
-        </View>
-    );
-}
-
-function InfoRow({ label, children }) {
-    return (
-        <View style={styles.row}>
-            <Text style={styles.rowLabel}>{label}</Text>
-            <View style={styles.pills}>{children}</View>
-        </View>
-    );
-}
-
-function Pill({ text, tone = "neutral" }) {
-    const style = toneStyles[tone] || toneStyles.neutral;
-    return (
-        <View style={[styles.pill, style.pill]}>
-            <Text style={[styles.pillText, style.text]} numberOfLines={1}>
-                {text}
-            </Text>
-            {tone === "warn" && (
-                <Ionicons name="warning" size={12} color={style.text.color} style={{ marginLeft: 6 }} />
-            )}
-        </View>
-    );
-}
-
-const toneStyles = {
-    neutral: { pill: { backgroundColor: "#E8F0E4", borderWidth: 1, borderColor: "#9DBB97" }, text: { color: "#5F8A5F" } },
-    warn: { pill: { backgroundColor: "#FFE5E5", borderWidth: 1, borderColor: "#FF6B6B" }, text: { color: "#D63031" } },
-    muted: { pill: { backgroundColor: "#F2F2F2", borderWidth: 1, borderColor: "#D6D6D6" }, text: { color: "#999" } },
+const COLORS = {
+  cream: '#F4F0E2',
+  greenDark: '#5F8A5F',
+  greenMid: '#9DBB97',
+  greenLight: '#9FBE9A',
+  text: '#333',
 };
 
 function capitalize(s) {
-    const str = String(s || "");
-    return str.length ? str[0].toUpperCase() + str.slice(1) : str;
+  const str = String(s || "");
+  return str.length ? str[0].toUpperCase() + str.slice(1) : str;
 }
 
-const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F4F0E2" },
+export default function FriendProfile({ friendId, onBack }) {
+  const person = useMemo(() => getPersonById(friendId), [friendId]);
+  if (!person) return null;
 
-    topBar: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingTop: 60,
-        paddingBottom: 14,
-        backgroundColor: "#5F8A5F",
-        borderBottomWidth: 1,
-        borderBottomColor: "#9DBB97",
-        marginBottom: 0,
-    },
-    backBtn: { flexDirection: "row", alignItems: "center", width: 72 },
-    backText: { fontSize: 14, fontWeight: "700", color: "#F4F0E2" },
-    topTitle: { flex: 1, textAlign: "center", fontSize: 16, fontWeight: "800", color: "#F4F0E2" },
+  const firstName = person.name?.split(" ")[0] || "Friend";
 
-    scrollContent: { paddingBottom: 20, paddingHorizontal: 16 },
+  const Tag = ({ label, variant }) => (
+    <View style={[s.tagBase, s[`tag_${variant}`]]}>
+      <Text style={[s.tagTextBase, s[`tagText_${variant}`]]}>{label}</Text>
+      {variant === 'danger' && (
+        <Ionicons name="warning" size={12} color="#D63031" style={{ marginLeft: 6 }} />
+      )}
+    </View>
+  );
 
-    avatarWrap: { alignItems: "center", marginTop: 20, marginBottom: 12 },
-    avatarCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: "#9FBE9A" },
-    qrBadge: {
-        position: "absolute",
-        right: 48,
-        bottom: 8,
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        backgroundColor: "#9DBB97",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    qrText: { fontSize: 10, fontWeight: "900", color: "#fff" },
+  return (
+    <ScrollView style={s.container}>
+      {/* Header with avatar */}
+      <View style={s.header}>
+        <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.85}>
+          <Ionicons name="chevron-back" size={20} color="#F4F0E2" />
+          <Text style={s.backText}>Friends</Text>
+        </TouchableOpacity>
 
-    card: { backgroundColor: "#fff", borderRadius: 14, padding: 12, marginBottom: 12 },
+        <View style={s.avatarWrap}>
+          <View style={s.avatar}>
+            <Ionicons name="person" size={60} color="#fff" />
+          </View>
+          <View style={s.qrBadge}>
+            <Ionicons name="qr-code-outline" size={16} color="#fff" />
+          </View>
+        </View>
 
-    username: { textAlign: "center", fontSize: 12, fontWeight: "700", color: "#5F8A5F", marginBottom: 2 },
-    fullName: { textAlign: "center", fontSize: 12, fontWeight: "700", color: "#333" },
+        <Text style={s.name}>{person.name}</Text>
+        <Text style={s.email}>@{person.username}</Text>
+      </View>
 
-    sectionTitle: { fontSize: 12, fontWeight: "800", color: "#333", marginBottom: 10 },
-    row: { marginBottom: 10 },
-    rowLabel: { fontSize: 11, fontWeight: "800", color: "#666", marginBottom: 8 },
-    pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+      {/* Allergies */}
+      <View style={[s.section, s.sectionTight]}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionTitle}>{firstName}'s Allergies</Text>
+        </View>
+        <View style={s.tagsRow}>
+          {(person.allergies?.length ? person.allergies : ["None"]).map((a) => (
+            <Tag
+              key={`allergy-${a}`}
+              label={a === "None" ? "None" : capitalize(a)}
+              variant={a === "None" ? "soft" : "danger"}
+            />
+          ))}
+        </View>
+      </View>
 
-    pill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-    pillText: { fontSize: 12, fontWeight: "800" },
+      {/* Dietary Profile */}
+      <View style={[s.section, s.sectionTight]}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionTitle}>Dietary Preferences</Text>
+        </View>
+        <View style={s.tagsRow}>
+          {(person.dietaryProfile?.length ? person.dietaryProfile : ["None"]).map((d) => (
+            <Tag
+              key={`diet-${d}`}
+              label={d}
+              variant={d === "None" ? "soft" : "neutral"}
+            />
+          ))}
+        </View>
+      </View>
 
-    favGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
-    favTile: { width: "31.5%", aspectRatio: 1, borderRadius: 12, backgroundColor: "#9DBB97", position: "relative", overflow: "hidden" },
-    heart: { position: "absolute", top: 8, right: 8, opacity: 0.9 },
+      {/* Dislikes */}
+      <View style={[s.section, s.sectionTight]}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionTitle}>Dislikes</Text>
+        </View>
+        <View style={s.tagsRow}>
+          {(person.dislikes?.length ? person.dislikes : ["None"]).map((d) => (
+            <Tag
+              key={`dislike-${d}`}
+              label={d}
+              variant={d === "None" ? "soft" : "soft"}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* Favorites */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>{firstName}'s Favorites</Text>
+        <View style={s.favGrid}>
+          {(person.favorites?.length ? person.favorites : Array.from({ length: 6 }, (_, i) => ({ id: `p-${i}` }))).map((f) => (
+            <View key={f.id} style={s.favTile}>
+              <Ionicons name="heart-outline" size={16} color="#fff" style={s.heart} />
+            </View>
+          ))}
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.cream,
+  },
+
+  header: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 30,
+    backgroundColor: COLORS.greenDark,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.greenMid,
+  },
+
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 1,
+  },
+  backText: { fontSize: 14, fontWeight: '700', color: '#F4F0E2' },
+
+  avatarWrap: {
+    position: 'relative',
+    marginBottom: 15,
+    marginTop: 10,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.greenLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrBadge: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#111',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+
+  name: { fontSize: 24, fontWeight: 'bold', color: COLORS.cream },
+  email: { fontSize: 14, color: '#d4d0c2', marginTop: 5 },
+
+  section: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  sectionTight: { marginTop: 0 },
+
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    alignItems: 'center',
+  },
+
+  tagBase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  tagTextBase: { fontWeight: '500' },
+
+  tag_danger: { backgroundColor: '#FFE5E5', borderColor: '#FF6B6B' },
+  tagText_danger: { color: '#D63031' },
+
+  tag_neutral: { backgroundColor: '#E8F0E4', borderColor: COLORS.greenMid },
+  tagText_neutral: { color: COLORS.greenDark },
+
+  tag_soft: { backgroundColor: '#F2F2F2', borderColor: '#D6D6D6' },
+  tagText_soft: { color: '#444' },
+
+  favGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10, marginTop: 8 },
+  favTile: { width: '31.5%', aspectRatio: 1, borderRadius: 12, backgroundColor: COLORS.greenMid, position: 'relative', overflow: 'hidden' },
+  heart: { position: 'absolute', top: 8, right: 8, opacity: 0.9 },
 });

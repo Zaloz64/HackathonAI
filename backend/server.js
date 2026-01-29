@@ -13,14 +13,14 @@ const PORT = process.env.PORT || 3001;
 
 // Initialize OpenAI client (only if API key is available)
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 8000 })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 30000 })
   : null;
 
 // Set to true to skip LLM and use fast keyword detection only
 const USE_KEYWORDS_ONLY = process.env.USE_KEYWORDS_ONLY === 'true';
 
 // Set to true to use mock data instead of real OCR (for development)
-const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'true' || true; // Set to true for dev
+const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'false' || false; // Set to true for dev
 
 // Mock ingredients list with various allergens for testing
 const MOCK_INGREDIENTS = `Ingredienser: Vetemjöl, vatten, socker, rapsolja,
@@ -539,8 +539,9 @@ app.post('/api/ping', (_req, res) => {
 
 // Recipe assistant endpoint
 app.post('/api/recipe', async (req, res) => {
-  const { query, dietary_context } = req.body;
-  console.log(`[RECIPE] Query: "${query}" | Context: "${dietary_context}"`);
+  const { query, dietary_context, servings } = req.body;
+  const numServings = servings || 2;
+  console.log(`[RECIPE] Query: "${query}" | Servings: ${numServings} | Context: "${dietary_context}"`);
 
   if (!query) {
     return res.status(400).json({ error: 'Missing query' });
@@ -557,12 +558,16 @@ app.post('/api/recipe', async (req, res) => {
             content: `You are a helpful recipe assistant for people with dietary restrictions.
 Given a user's request and their dietary context, suggest a recipe that is safe for everyone mentioned.
 
+IMPORTANT RULES:
+- Scale the recipe for exactly ${numServings} servings/people.
+- Use ONLY European/metric measurements (grams, kilograms, millilitres, litres, degrees Celsius). Never use cups, ounces, pounds, or Fahrenheit.
+
 You MUST respond with valid JSON in this exact format:
 {
-  "name": "Recipe Name",
+  "name": "Recipe Name (${numServings} servings)",
   "description": "Brief description of the dish",
   "ingredients": [
-    {"item": "ingredient name", "amount": "quantity", "warning": "optional allergen note or null"}
+    {"item": "ingredient name", "amount": "quantity in metric", "warning": "optional allergen note or null"}
   ],
   "instructions": "Brief cooking instructions as a single string",
   "shopping_tips": ["tip 1", "tip 2"],
@@ -574,7 +579,7 @@ Keep it concise and practical. Return ONLY valid JSON, no markdown.`
           },
           {
             role: 'user',
-            content: `Dietary context: ${dietary_context || 'No restrictions.'}\n\nRequest: ${query}`
+            content: `Dietary context: ${dietary_context || 'No restrictions.'}\nNumber of people: ${numServings}\n\nRequest: ${query}`
           }
         ],
         max_tokens: 1000,
@@ -598,89 +603,13 @@ Keep it concise and practical. Return ONLY valid JSON, no markdown.`
       }
     } catch (err) {
       console.error('[RECIPE] OpenAI error:', err.message);
-      // Fall through to fallback
+      return res.status(500).json({ error: 'Could not generate recipe. AI service unavailable.' });
     }
   }
 
-  // Fallback: generate a structured response without LLM
-  const fallbackRecipe = buildFallbackRecipe(query, dietary_context);
-  res.json({
-    response: formatRecipeText(fallbackRecipe),
-    recipe: fallbackRecipe,
-  });
+  // No AI available
+  return res.status(503).json({ error: 'Recipe generation requires an AI service. Please configure OPENAI_API_KEY.' });
 });
-
-function buildFallbackRecipe(query, dietaryContext) {
-  const hasRestrictions = dietaryContext && dietaryContext !== 'No dietary restrictions.';
-
-  // Simple keyword-based recipe suggestions
-  const q = query.toLowerCase();
-  let name = query;
-  let ingredients = [];
-  let instructions = '';
-  let tips = [];
-
-  if (q.includes('sushi')) {
-    name = 'Homemade Sushi Rolls';
-    ingredients = [
-      { item: 'Sushi rice', amount: '2 cups', warning: null },
-      { item: 'Rice vinegar', amount: '3 tbsp', warning: null },
-      { item: 'Nori seaweed sheets', amount: '5 sheets', warning: null },
-      { item: 'Soy sauce', amount: 'to taste', warning: hasRestrictions ? 'Use gluten-free tamari if avoiding gluten' : null },
-      { item: 'Fresh salmon or vegetables', amount: 'as needed', warning: null },
-      { item: 'Avocado', amount: '1', warning: null },
-      { item: 'Cucumber', amount: '1', warning: null },
-    ];
-    instructions = 'Cook rice, season with vinegar. Place nori on bamboo mat, spread rice, add fillings, roll tightly. Slice and serve.';
-    tips = ['Check soy sauce for gluten — use tamari instead', 'Fresh fish should be sushi-grade'];
-  } else if (q.includes('pasta')) {
-    name = 'Simple Pasta';
-    ingredients = [
-      { item: 'Pasta', amount: '400g', warning: hasRestrictions ? 'Use gluten-free pasta if needed' : null },
-      { item: 'Olive oil', amount: '3 tbsp', warning: null },
-      { item: 'Garlic', amount: '3 cloves', warning: null },
-      { item: 'Cherry tomatoes', amount: '200g', warning: null },
-      { item: 'Fresh basil', amount: 'a handful', warning: null },
-      { item: 'Parmesan', amount: 'to taste', warning: hasRestrictions ? 'Use dairy-free alternative if avoiding milk/lactose' : null },
-    ];
-    instructions = 'Cook pasta al dente. Sauté garlic in olive oil, add halved tomatoes. Toss with pasta, top with basil and cheese.';
-    tips = ['Many stores carry good gluten-free pasta', 'Nutritional yeast works as a dairy-free parmesan substitute'];
-  } else if (q.includes('salad')) {
-    name = 'Fresh Garden Salad';
-    ingredients = [
-      { item: 'Mixed greens', amount: '200g', warning: null },
-      { item: 'Cherry tomatoes', amount: '150g', warning: null },
-      { item: 'Cucumber', amount: '1', warning: null },
-      { item: 'Red onion', amount: '½', warning: null },
-      { item: 'Olive oil', amount: '3 tbsp', warning: null },
-      { item: 'Lemon juice', amount: '2 tbsp', warning: null },
-      { item: 'Feta cheese', amount: '100g', warning: hasRestrictions ? 'Skip or use dairy-free alternative' : null },
-    ];
-    instructions = 'Wash and chop vegetables. Combine in a bowl. Drizzle with olive oil and lemon juice. Toss and serve.';
-    tips = ['Naturally gluten-free and easy to adapt', 'Add protein with grilled chicken or chickpeas'];
-  } else {
-    name = `${query.charAt(0).toUpperCase() + query.slice(1)} Recipe`;
-    ingredients = [
-      { item: 'Main protein or base', amount: 'as needed', warning: null },
-      { item: 'Vegetables of choice', amount: 'as needed', warning: null },
-      { item: 'Seasoning', amount: 'to taste', warning: hasRestrictions ? 'Check labels for hidden allergens' : null },
-      { item: 'Cooking oil', amount: '2 tbsp', warning: null },
-    ];
-    instructions = 'Prepare ingredients, cook main component, add vegetables and seasoning. Serve hot.';
-    tips = ['Always read ingredient labels', 'When in doubt, choose whole, unprocessed ingredients'];
-  }
-
-  return {
-    name,
-    description: `A delicious ${name.toLowerCase()} adapted for your dietary needs.`,
-    ingredients,
-    instructions,
-    shopping_tips: tips,
-    dietary_notes: hasRestrictions
-      ? `This recipe considers: ${dietaryContext}`
-      : 'No specific dietary restrictions applied.',
-  };
-}
 
 function formatRecipeText(recipe) {
   if (!recipe || !recipe.name) return 'Could not generate recipe.';
