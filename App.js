@@ -1,5 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useState, useEffect } from 'react';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,8 +16,6 @@ import { checkSafetyForPersonas, checkSafetyForDiet, checkSafetyForEvent } from 
 // Components
 import {
   Scanner,
-  TopNavigation,
-  PersonaBar,
   MainContent,
   BottomNavigation,
   ProductModal,
@@ -25,9 +25,9 @@ import {
   SocialsPage,
   FriendProfile,
   FriendsPage,
-  AllergenBar,
-  EventsBar,
-  EventDetailPage
+  EventDetailPage,
+  ScanSettingsModal,
+  ShoppingList,
 } from './src/components';
 
 // Styles
@@ -46,7 +46,7 @@ export default function App() {
   const [ingredientsModalVisible, setIngredientsModalVisible] = useState(false);
   const [analyzingAllergens, setAnalyzingAllergens] = useState(false);
   const [activeTab, setActiveTab] = useState('scan');
-  const [selectedTopTab, setSelectedTopTab] = useState('persona');
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const [selectedPersonas, setSelectedPersonas] = useState([]);
   const [safetyResult, setSafetyResult] = useState(null);
   //const [selectedFriend, setSelectedFriend] = useState(null);
@@ -55,6 +55,7 @@ export default function App() {
   const [selectedAllergens, setSelectedAllergens] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [scanSubTab, setScanSubTab] = useState('scanner'); // 'scanner' | 'shopping'
 
 
   // Toggle persona selection
@@ -249,47 +250,89 @@ export default function App() {
         );
       case "profile":
         return <ProfilePage />;
-      default:
+      default: {
+        const filterCount = selectedPersonas.length + selectedAllergens.length + (selectedEventId ? 1 : 0);
         return (
           <>
-            <TopNavigation
-              selectedTab={selectedTopTab}
-              onSelectTab={setSelectedTopTab}
-              personaCount={selectedPersonas.length}
-            />
+            {/* Header */}
+            <View style={{
+              backgroundColor: '#5F8A5F',
+              paddingTop: 60,
+              paddingBottom: 12,
+              paddingHorizontal: 20,
+            }}>
+              {/* Title row */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: '#F4F0E2' }}>Food Scanner</Text>
+                <TouchableOpacity
+                  onPress={() => setSettingsVisible(true)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center',
+                    backgroundColor: '#9DBB97', borderRadius: 20,
+                    paddingHorizontal: 14, paddingVertical: 8, gap: 6,
+                  }}
+                >
+                  <Ionicons name="options" size={16} color="#F4F0E2" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F4F0E2' }}>
+                    Filters{filterCount > 0 ? ` (${filterCount})` : ''}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            {selectedTopTab === 'persona' && (
-              <PersonaBar
+              {/* Sub-tab toggle */}
+              <View style={{
+                flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.15)',
+                borderRadius: 12, padding: 3,
+              }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                    backgroundColor: scanSubTab === 'scanner' ? '#F4F0E2' : 'transparent',
+                  }}
+                  onPress={() => setScanSubTab('scanner')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{
+                    fontSize: 14, fontWeight: '700',
+                    color: scanSubTab === 'scanner' ? '#3D6B3D' : '#F4F0E2',
+                  }}>Scanner</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                    backgroundColor: scanSubTab === 'shopping' ? '#F4F0E2' : 'transparent',
+                  }}
+                  onPress={() => setScanSubTab('shopping')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{
+                    fontSize: 14, fontWeight: '700',
+                    color: scanSubTab === 'shopping' ? '#3D6B3D' : '#F4F0E2',
+                  }}>Shopping List</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Content */}
+            {scanSubTab === 'scanner' ? (
+              <MainContent
+                loading={loading}
+                ingredientsImage={ingredientsImage}
+                safetyResult={safetyResult}
                 selectedPersonas={selectedPersonas}
-                onTogglePersona={togglePersona}
-              />
-            )}
-            {selectedTopTab === 'dietary' && (
-              <AllergenBar
                 selectedAllergens={selectedAllergens}
-                onToggleAllergen={toggleAllergen}
-              />
-            )}
-            {selectedTopTab === 'events' && (
-              <EventsBar
                 selectedEventId={selectedEventId}
-                onSelectEvent={toggleEvent}
+                scannedIngredients={scannedIngredients}
+                onViewDetails={() => setIngredientsModalVisible(true)}
               />
+            ) : (
+              <ShoppingList selectedPersonas={selectedPersonas} />
             )}
-
-
-            <MainContent
-              loading={loading}
-              ingredientsImage={ingredientsImage}
-              safetyResult={safetyResult}
-              selectedPersonas={selectedPersonas}
-              selectedAllergens={selectedAllergens}
-              selectedEventId={selectedEventId}
-              scannedIngredients={scannedIngredients}
-              onViewDetails={() => setIngredientsModalVisible(true)}
-            />
           </>
         );
+      }
     }
   };
 
@@ -320,6 +363,17 @@ export default function App() {
         safetyResult={safetyResult}
         onAnalyzeAllergens={analyzeAllergens}
         onClose={() => setIngredientsModalVisible(false)}
+      />
+
+      <ScanSettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        selectedPersonas={selectedPersonas}
+        onTogglePersona={togglePersona}
+        selectedAllergens={selectedAllergens}
+        onToggleAllergen={toggleAllergen}
+        selectedEventId={selectedEventId}
+        onSelectEvent={toggleEvent}
       />
 
       <StatusBar style="dark" />

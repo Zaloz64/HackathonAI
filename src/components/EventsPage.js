@@ -12,13 +12,19 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { EVENTS } from '../config/constants';
 
-const INITIAL_EVENTS = [
-  { id: 1, title: 'Birthday Party', date: 'Feb 15, 2026', time: '6:00 PM', attendees: 12, icon: 'gift' },
-  { id: 2, title: 'Team Lunch', date: 'Feb 18, 2026', time: '12:30 PM', attendees: 8, icon: 'restaurant' },
-  { id: 3, title: 'Dinner with Friends', date: 'Feb 22, 2026', time: '7:30 PM', attendees: 5, icon: 'people' },
-  { id: 4, title: 'Family Brunch', date: 'Feb 25, 2026', time: '11:00 AM', attendees: 10, icon: 'home' },
-];
+const INITIAL_EVENTS = EVENTS.map((e) => ({
+  id: e.id,
+  title: e.title,
+  date: e.date,
+  time: e.time,
+  attendees: e.invited?.length || 0,
+  attendeeIds: e.invited,
+  icon: 'calendar',
+  location: e.location,
+  notes: e.notes,
+}));
 
 const ICON_OPTIONS = [
   { name: 'gift', label: 'Party' },
